@@ -1,5 +1,5 @@
-Next line in order: 'marker NT' 'marker derived' 'terminal extension suffix' 'empty string token'
-## $$ ' EMPTYSTRING
+Next line in order: 'marker NT' 'marker derived' 'terminal extension suffix' 'empty string token' 'END OF FILE token'
+## $$ ' EMPTYSTRING EOF
 ## Expression			$$ Expression + Term
 						$$ Expression - Term
 						$$ Term

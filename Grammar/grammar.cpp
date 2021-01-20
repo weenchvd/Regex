@@ -6,82 +6,207 @@
 #include<vector>
 #include<map>
 #include"grammar.hpp"
+#include"../Error/error.hpp"
 
 int main()
 {
-	const std::string sourceGrammar{ "Regex Grammar.txt" };
-	std::ifstream ifs{ sourceGrammar };
-	if (!ifs) {
-		std::cerr << "Cannot open input file" << std::endl;
+	try
+	{
+		const std::string sourceGrammar{ "OriginalGrammar.txt" };
+		std::ifstream ifs{ sourceGrammar };
+		if (!ifs) {
+			Error::ErrPrint(std::cerr, Error::Level::ERROR, Error::Type::INFILE, sourceGrammar);
+			return 1;
+		}
+		const std::string destinationGrammar{ "BacktrackFreeGrammar.txt" };
+		std::ofstream ofs{ destinationGrammar };
+		if (!ofs) {
+			Error::ErrPrint(std::cerr, Error::Level::ERROR, Error::Type::OUTFILE, destinationGrammar);
+			return 1;
+		}
+
+		CFG::BNFGrammar grammar;
+		ifs >> grammar;
+		if (ifs || !ifs && !ifs.eof()) {
+			Error::ErrPrint(std::cerr, Error::Level::ERROR, "File data read error");
+			return 1;
+		}
+		grammar.TransformGrammar(std::cerr);
+		ofs << grammar;
+
+		std::cout << std::endl << "Success!" << std::endl;
+		return 0;
+	}
+	catch (const std::exception& e)
+	{
+		Error::ErrPrint(std::cerr, Error::Level::EXCEPTION, e.what());
 		return -1;
 	}
-	const std::string resultGrammar{ "Result Grammar.txt" };
-	std::ofstream ofs{ resultGrammar };
-	if (!ofs) {
-		std::cerr << "Cannot open output file" << std::endl;
-		return -1;
-	}
-
-	CFG::BNFGrammar grammar;
-	ifs >> grammar;
-	if (!ifs) {
-		if (ifs.eof()) std::cout << "ifs.eof() is true" << std::endl;
-		else if (ifs.fail()) std::cout << "ifs.fail() is true" << std::endl;
-		else std::cout << "ifs.bad() is true" << std::endl;
-	}
-	grammar.TransformGrammar(std::cerr);
-	ofs << grammar;
-
-	return 0;
 }
 
 namespace CFG
 {
+	BNFGrammar* Production::gram = nullptr;
+	std::string BNFGrammar::prefNT;
+	std::string BNFGrammar::prefDer;
+	std::string BNFGrammar::suffNT;
+	std::string BNFGrammar::lexES;
+	std::string BNFGrammar::lexEOF;
+	std::string BNFGrammar::comment;
+
 	void BNFGrammar::Print(std::ostream& os, const std::vector<LexemeID>& set) const
 	{
-		for (LexemeID id : set) {
-			os << lex[id] << ' ';
+		for (int i = 0; i < set.size(); ++i) {
+			if (i > 0) {
+				os << ' ';
+			}
+			os << lex[set[i]];
 		}
 	}
 
-	bool BNFGrammar::CheckOriginalGrammar(std::ostream& error) const
+	void BNFGrammar::PrintFirstSet(std::ostream& os, LexemeID id) const
 	{
-		std::vector<int> counter(next);
-		for (int& i : counter) {
-			i = 0;
+		os << "FIRST(" << lex[id] << "): ";
+		Print(os, firstSet[id]);
+		os << std::endl;
+	}
+
+	void BNFGrammar::PrintFollowSet(std::ostream& os, LexemeID id) const
+	{
+		os << "FOLLOW(" << lex[id] << "): ";
+		Print(os, followSet[id]);
+		os << std::endl;
+	}
+
+	void BNFGrammar::PrintFirstPlusSet(std::ostream& os, size_t productionIndex, size_t derivedIndex) const
+	{
+		os << "FIRST+(" << lex[prodSet[productionIndex].nt] << " -> ";
+		Print(os, prodSet[productionIndex].derSet[derivedIndex]);
+		os << "): ";
+		Print(os, firstPlusSet[productionIndex][derivedIndex]);
+		os << std::endl;
+	}
+
+	//bool BNFGrammar::OriginalGrammarIsValid(std::ostream& error) const
+	//{
+	//	bool originalGrammarIsValid = true;
+	//	std::vector<int> counter(next);		// vector[LexemeID] -> counter
+	//	for (int& i : counter) {
+	//		i = 0;
+	//	}
+	//	bool lexESisPresent = true;
+	//	auto iter = id.find(lexES);
+	//	if (iter == id.end()) {
+	//		lexESisPresent = false;
+	//	}
+	//	for (int i = 0; i < prodSet.size(); ++i) {
+	//		const Production& p = prodSet[i];
+	//		++counter[p.nt];
+	//		for (const Derived& d : p.derSet) {
+	//			if (d.size() == 1 && d[0] == p.nt) {
+	//				Error::ErrPrint(error, Error::Level::ERROR,
+	//					"Grammar has cycle '" + lex[p.nt] + " -> " + lex[p.nt] + "'");
+	//				originalGrammarIsValid = false;
+	//			}
+	//			if (lexESisPresent && d.size() == 1 && d[0] == iter->second) {
+	//				Error::ErrPrint(error, Error::Level::ERROR, "Grammar has " + lexES);
+	//				originalGrammarIsValid = false;
+	//			}
+	//			for (int j = 0; j < i; ++j) {
+	//				if (d.size() == 1 && d[0] == prodSet[j].nt) {
+	//					Error::ErrPrint(error, Error::Level::WARNING,
+	//						"Probably the grammar has indirect cycle '" + lex[prodSet[j].nt]
+	//						+ " -> " + lex[prodSet[i].nt] + " -> " + lex[prodSet[j].nt] + "'");
+	//				}
+	//			}
+	//		}
+	//	}
+	//	for (LexemeID id = 0; id < next; ++id) {
+	//		if (counter[id] > 1) {
+	//			Error::ErrPrint(error, Error::Level::ERROR,
+	//				"Grammar has more than 1 production for '" + lex[id] + "'");
+	//			originalGrammarIsValid = false;
+	//		}
+	//	}
+	//	return originalGrammarIsValid;
+	//}
+
+	bool BNFGrammar::OriginalGrammarIsValid(std::ostream& error) const
+	{
+		bool originalGrammarIsValid = true;
+		if (OriginalGrammarContainsInfiniteCycle(error)) {
+			originalGrammarIsValid = false;
 		}
-		bool lexESisPresent = true;
-		auto iter = id.find(lexES);
-		if (iter == id.end()) {
-			lexESisPresent = false;
+		if (OriginalGrammarContainsEpsilonProduction(error)) {
+			originalGrammarIsValid = false;
 		}
+		return originalGrammarIsValid;
+	} // TODO CHAPTER 3 Parsers, 3.3 TOP-DOWN PARSING, Part "Left-Factoring to Eliminate Backtracking"
+
+	// original grammar has cycles(A ->+ A)
+	// CHAPTER 3 Parsers, 3.3 TOP-DOWN PARSING, Part "Eliminating Left Recursion", page 102, the first paragraph
+	bool BNFGrammar::OriginalGrammarContainsInfiniteCycle(std::ostream& error) const
+	{
+		bool grammarContainsCycle = false;
 		for (int i = 0; i < prodSet.size(); ++i) {
 			const Production& p = prodSet[i];
-			++counter[p.nt];
 			for (const Derived& d : p.derSet) {
 				if (d.size() == 1 && d[0] == p.nt) {
-					error << "\tError. Grammar has cycle '" << lex[p.nt] << " -> " << lex[p.nt] << "'" << std::endl;
-					return false;
+					Error::ErrPrint(error, Error::Level::ERROR,
+						"Grammar has cycle: " + lex[p.nt] + " -> " + lex[p.nt]);
+					grammarContainsCycle = true;
 				}
-				if (lexESisPresent && d.size() == 1 && d[0] == iter->second) {
-					error << "\tError. Grammar has " << lexES << std::endl;
-					return false;
+			}
+		}
+		return grammarContainsCycle;
+	}
+
+	// original grammar has Epsilon-productions
+	// CHAPTER 3 Parsers, 3.3 TOP-DOWN PARSING, Part "Eliminating Left Recursion", page 102, the first paragraph
+	bool BNFGrammar::OriginalGrammarContainsEpsilonProduction(std::ostream& error) const
+	{
+		bool grammarContainsEpsilonProduction = false;
+		for (int i = 0; i < prodSet.size(); ++i) {
+			const Production& p = prodSet[i];
+			for (const Derived& d : p.derSet) {
+				if (d.size() == 1 && d[0] == idES) {
+					Error::ErrPrint(error, Error::Level::ERROR, "Grammar has Epsilon-productions: "
+						+ lex[p.nt] + " -> " + lexES);
+					grammarContainsEpsilonProduction = true;
 				}
-				for (int j = 0; j < i; ++j) {
-					if (d.size() == 1 && d[0] == prodSet[j].nt) {
-						error << "\tWarning. Probably the grammar has indirect cycle '" << lex[prodSet[j].nt]
-							<< " -> " << lex[prodSet[i].nt] << " -> " << lex[prodSet[j].nt] << "'" << std::endl;
+			}
+		}
+		return grammarContainsEpsilonProduction;
+	}
+
+	bool BNFGrammar::TransformedGrammarIsBacktrackFree(std::ostream& error) const
+	{
+		bool grammarIsBacktrackFree = true;
+		for (int i = 0; i < prodSet.size(); ++i) {
+			const Production& p = prodSet[i];
+			for (int j = 0; j < p.derSet.size(); ++j) {
+				for (int k = j + 1; k < p.derSet.size(); ++k) {
+					if (j != k && SetsContainIdenticalElements(firstPlusSet[i][j], firstPlusSet[i][k])) {
+						Error::ErrPrint(error, Error::Level::ERROR,
+							"Grammar is not backtrack free. Identical elements are present in the sets:");
+						PrintFirstPlusSet(error, i, j);
+						PrintFirstPlusSet(error, i, k);
+						grammarIsBacktrackFree = false;
 					}
 				}
 			}
 		}
-		for (int i = 0; i < counter.size(); ++i) {
-			if (counter[i] > 1) {
-				error << "\tError. Grammar has more than 1 production for '" << lex[i] << "'" << std::endl;
-				return false;
+		return grammarIsBacktrackFree;
+	}
+
+	std::pair<int, bool> BNFGrammar::GrammarContainsProductionsForNonterminal(LexemeID nonterminal) const
+	{
+		for (int i = 0; i < prodSet.size(); ++i) {
+			if (prodSet[i].nt == nonterminal) {
+				return { i, true };
 			}
 		}
-		return true;
+		return { 0, false };
 	}
 
 	bool BNFGrammar::SetContainsOnlyTerminalsAndNonterminals(const Derived& derived) const
@@ -102,6 +227,17 @@ namespace CFG
 	{
 		for (LexemeID id : set) {
 			if (id == target) return true;
+		}
+		return false;
+	}
+
+	// both sets contain at least 1 identical element
+	bool BNFGrammar::SetsContainIdenticalElements(const std::vector<LexemeID>& a, const std::vector<LexemeID>& b) const
+	{
+		for (LexemeID idA : a) {
+			for (LexemeID idB : b) {
+				if (idA == idB) return true;
+			}
 		}
 		return false;
 	}
@@ -159,21 +295,22 @@ namespace CFG
 
 	void BNFGrammar::TransformGrammar(std::ostream& error)
 	{
-		RemoveDirectAndIndirectLeftRecursion(error);
-		FindAllNonterminals(error);
-		FindAllFirstSets(error);
-		FindAllFollowSets(error);
-	}
-
-	void BNFGrammar::RemoveDirectAndIndirectLeftRecursion(std::ostream& error)
-	{
-		if (!CheckOriginalGrammar(error)) return;
-		RemoveRecursion(error);
+		if (!OriginalGrammarIsValid(error)) {
+			throw std::runtime_error{ "Runtime error" };
+		}
+		RemoveAllLeftRecursion();
+		FindAllNonterminals();
+		FindAllFirstSets();
+		FindAllFollowSets();
+		FindAllFirstPlusSets();
+		if (!TransformedGrammarIsBacktrackFree(error)) {
+			throw std::runtime_error{ "Runtime error" };
+		}
 	}
 
 	// CHAPTER 3 Parsers, 3.3 TOP-DOWN PARSING, Part "Eliminating Left Recursion",
 	// FIGURE 3.6 Removal of Indirect Left Recursion
-	void BNFGrammar::RemoveRecursion(std::ostream& error)
+	void BNFGrammar::RemoveAllLeftRecursion()
 	{
 		std::vector<Production> newProdList;
 		for (int i = 0; i < prodSet.size(); ++i) {
@@ -201,12 +338,6 @@ namespace CFG
 					}
 				}
 				curProd.derSet = newDerList;
-//error << "--AFTER INDIRECT i = " << i << ", j = " << j << ":" << std::endl;
-//error << "-----PRODLIST:" << std::endl;
-//for (const Production& p : prodSet) error << p;
-//error << "-----NEWPRODLIST:" << std::endl;
-//for (const Production& p : newProdList) error << p;
-//error << "----------------------------------------" << std::endl;
 			}
 			// remove any direct left recursion
 			bool leftRecursion = false;
@@ -237,17 +368,11 @@ namespace CFG
 			else {
 				newProdList.push_back(curProd);
 			}
-//error << "``AFTER DIRECT i = " << i << ":" << std::endl;
-//error << "`````PRODLIST:" << std::endl;
-//for (const Production& p : prodSet) error << p;
-//error << "`````NEWPRODLIST:" << std::endl;
-//for (const Production& p : newProdList) error << p;
-//error << "````````````````````````````````````````" << std::endl;
 		}
 		prodSet = newProdList;
 	}
 
-	void BNFGrammar::FindAllNonterminals(std::ostream& error)
+	void BNFGrammar::FindAllNonterminals()
 	{
 		typeSet.resize(next);
 		for (LexemeType& lex : typeSet) {
@@ -262,7 +387,7 @@ namespace CFG
 
 	// CHAPTER 3 Parsers, 3.3 TOP-DOWN PARSING, Part "Backtrack-Free Parsing",
 	// FIGURE 3.7 Computing FIRST Sets for Symbols in a Grammar
-	void BNFGrammar::FindAllFirstSets(std::ostream& error)
+	void BNFGrammar::FindAllFirstSets()
 	{
 		firstSet.resize(next);
 		for (LexemeID id = 0; id < next; ++id) {
@@ -301,7 +426,7 @@ namespace CFG
 
 	// CHAPTER 3 Parsers, 3.3 TOP-DOWN PARSING, Part "Backtrack-Free Parsing",
 	// FIGURE 3.8 Computing FOLLOW Sets for Non-Terminal Symbols
-	void BNFGrammar::FindAllFollowSets(std::ostream& error)
+	void BNFGrammar::FindAllFollowSets()
 	{
 		followSet.resize(next);
 		bool setsAreChanging = true;
@@ -332,6 +457,24 @@ namespace CFG
 		}
 		for (const Production& p : prodSet) {
 			followSet[p.nt].push_back(idEOF);
+		}
+	}
+
+	// CHAPTER 3 Parsers, 3.3 TOP-DOWN PARSING, Part "Backtrack-Free Parsing", page 107
+	void BNFGrammar::FindAllFirstPlusSets()
+	{
+		firstPlusSet.resize(prodSet.size());
+		for (int i = 0; i < prodSet.size(); ++i) {
+			firstPlusSet[i].resize(prodSet[i].derSet.size());
+		}
+		for (int i = 0; i < prodSet.size(); ++i) {
+			for (int j = 0; j < prodSet[i].derSet.size(); ++j) {
+				First set = GetFirstSetForProduction(i, j);
+				if (SetContains(set, idES)) {
+					Merge(set, followSet[prodSet[i].nt]);
+				}
+				firstPlusSet[i][j] = set;
+			}
 		}
 	}
 
@@ -403,7 +546,15 @@ namespace CFG
 		while (is) {
 			is >> prod;
 			if (!is && is.eof() == false) break;
-			gram.AddProduction(prod);
+			auto p = gram.GrammarContainsProductionsForNonterminal(prod.nt);
+			if (p.second) {
+				for (const Derived& d : prod.derSet) {
+					gram.prodSet[p.first].derSet.push_back(d);
+				}
+			}
+			else {
+				gram.prodSet.push_back(prod);
+			}
 		}
 		return is;
 	}
@@ -472,17 +623,20 @@ namespace CFG
 		// output FIRST sets
 		os << std::endl << std::endl;
 		for (int i = 0; i < gram.firstSet.size(); ++i) {
-			os << "FIRST(" << gram.lex[i] << "): ";
-			gram.Print(os, gram.firstSet[i]);
-			os << std::endl;
+			gram.PrintFirstSet(os, i);
 		}
 		// output FOLLOW sets
 		os << std::endl << std::endl;
 		for (int i = 0; i < gram.followSet.size(); ++i) {
 			if (gram.followSet[i].size() > 0) {
-				os << "FOLLOW(" << gram.lex[i] << "): ";
-				gram.Print(os, gram.followSet[i]);
-				os << std::endl;
+				gram.PrintFollowSet(os, i);
+			}
+		}
+		// output FIRST+ sets
+		os << std::endl << std::endl;
+		for (int i = 0; i < gram.prodSet.size(); ++i) {
+			for (int j = 0; j < gram.prodSet[i].derSet.size(); ++j) {
+				gram.PrintFirstPlusSet(os, i, j);
 			}
 		}
 		return os;

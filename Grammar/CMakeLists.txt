@@ -9,7 +9,7 @@ set (CMAKE_CXX_STANDARD 14)
 set (CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR}/..)
 
 set (FILE_NAME grammar)
-set (SOURCE_CXX_LIST ${FILE_NAME}.cpp)
+set (SOURCE_CXX_LIST ${FILE_NAME}.cpp ../Error/error.cpp)
 
 # Add source to this project's executable.
 add_executable (${FILE_NAME} ${SOURCE_CXX_LIST})
@@ -17,5 +17,5 @@ add_executable (${FILE_NAME} ${SOURCE_CXX_LIST})
 # TODO: Add tests and install targets if needed.
 install (TARGETS ${FILE_NAME} CONFIGURATIONS Debug DESTINATION Build/Debug)
 install (TARGETS ${FILE_NAME} CONFIGURATIONS Release DESTINATION Build)
-install (FILES "Regex Grammar.txt" CONFIGURATIONS Debug DESTINATION Build/Debug)
-install (FILES "Regex Grammar.txt" CONFIGURATIONS Release DESTINATION Build)
+install (FILES "OriginalGrammar.txt" CONFIGURATIONS Debug DESTINATION Build/Debug)
+install (FILES "OriginalGrammar.txt" CONFIGURATIONS Release DESTINATION Build)

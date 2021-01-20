@@ -1,0 +1,12 @@
+// Next line in order separated by a space: 'marker NT' 'marker derived' 'terminal extension suffix' 'empty string token (Epsilon-production)' 'END OF FILE token'
+## $$ ' EMPTYSTRING EOF
+## Goal					$$ Expression
+## Expression			$$ Expression + Term
+						$$ Expression - Term
+						$$ Term
+## Term					$$ Term * Factor
+						$$ Term / Factor
+						$$ Factor
+## Factor				$$ ( Expression )
+						$$ NUMBER
+						$$ NAME

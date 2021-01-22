@@ -54,13 +54,19 @@ namespace CFG								// context-free grammar
 
 	private:
 		// const members
+		std::string GetLexemeString(const std::vector<LexemeID>& set) const;
 		void Print(std::ostream& os, const std::vector<LexemeID>& set) const;
 		void PrintFirstSet(std::ostream& os, LexemeID id) const;
 		void PrintFollowSet(std::ostream& os, LexemeID id) const;
 		void PrintFirstPlusSet(std::ostream& os, size_t productionIndex, size_t derivedIndex) const;
 		bool OriginalGrammarIsValid(std::ostream& error) const;
 		bool OriginalGrammarContainsInfiniteCycle(std::ostream& error) const;
-		bool OriginalGrammarContainsEpsilonProduction(std::ostream& error) const;
+		bool CycleIsPresent(std::ostream& error) const;
+		bool OriginalGrammarContainsInvalidEpsilonProduction(std::ostream& error) const;
+		bool EpsilonProductionsContainOnlyEpsilon(std::ostream& error) const;
+		LexemeID FindInitialNonterminal() const;
+		bool OriginalGrammarContainsChainOfProduction(LexemeID from, LexemeID to) const;
+		bool ProductionsContainCommonPrefix(std::ostream& error) const;
 		bool TransformedGrammarIsBacktrackFree(std::ostream& error) const;
 		std::pair<int, bool> GrammarContainsProductionsForNonterminal(LexemeID nonterminal) const;
 		bool SetContainsOnlyTerminalsAndNonterminals(const Derived& derived) const;

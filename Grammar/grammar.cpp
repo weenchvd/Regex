@@ -5,6 +5,7 @@
 #include<string>
 #include<vector>
 #include<map>
+#include<queue>
 #include"grammar.hpp"
 #include"../Error/error.hpp"
 
@@ -37,10 +38,15 @@ int main()
 		std::cout << std::endl << "Success!" << std::endl;
 		return 0;
 	}
+	catch (const Error::RuntimeError& e)
+	{
+		Error::ErrPrint(std::cerr, Error::Level::EXCEPTION, Error::Type::RUNTIME, e.what());
+		return -1;
+	}
 	catch (const std::exception& e)
 	{
-		Error::ErrPrint(std::cerr, Error::Level::EXCEPTION, e.what());
-		return -1;
+		Error::ErrPrint(std::cerr, Error::Level::EXCEPTION, Error::Type::STD, e.what());
+		return -2;
 	}
 }
 
@@ -53,6 +59,18 @@ namespace CFG
 	std::string BNFGrammar::lexES;
 	std::string BNFGrammar::lexEOF;
 	std::string BNFGrammar::comment;
+
+	std::string BNFGrammar::GetLexemeString(const std::vector<LexemeID>& set) const
+	{
+		std::ostringstream oss;
+		for (int i = 0; i < set.size(); ++i) {
+			if (i > 0) {
+				oss << ' ';
+			}
+			oss << lex[set[i]];
+		}
+		return oss.str();
+	}
 
 	void BNFGrammar::Print(std::ostream& os, const std::vector<LexemeID>& set) const
 	{
@@ -87,98 +105,207 @@ namespace CFG
 		os << std::endl;
 	}
 
-	//bool BNFGrammar::OriginalGrammarIsValid(std::ostream& error) const
-	//{
-	//	bool originalGrammarIsValid = true;
-	//	std::vector<int> counter(next);		// vector[LexemeID] -> counter
-	//	for (int& i : counter) {
-	//		i = 0;
-	//	}
-	//	bool lexESisPresent = true;
-	//	auto iter = id.find(lexES);
-	//	if (iter == id.end()) {
-	//		lexESisPresent = false;
-	//	}
-	//	for (int i = 0; i < prodSet.size(); ++i) {
-	//		const Production& p = prodSet[i];
-	//		++counter[p.nt];
-	//		for (const Derived& d : p.derSet) {
-	//			if (d.size() == 1 && d[0] == p.nt) {
-	//				Error::ErrPrint(error, Error::Level::ERROR,
-	//					"Grammar has cycle '" + lex[p.nt] + " -> " + lex[p.nt] + "'");
-	//				originalGrammarIsValid = false;
-	//			}
-	//			if (lexESisPresent && d.size() == 1 && d[0] == iter->second) {
-	//				Error::ErrPrint(error, Error::Level::ERROR, "Grammar has " + lexES);
-	//				originalGrammarIsValid = false;
-	//			}
-	//			for (int j = 0; j < i; ++j) {
-	//				if (d.size() == 1 && d[0] == prodSet[j].nt) {
-	//					Error::ErrPrint(error, Error::Level::WARNING,
-	//						"Probably the grammar has indirect cycle '" + lex[prodSet[j].nt]
-	//						+ " -> " + lex[prodSet[i].nt] + " -> " + lex[prodSet[j].nt] + "'");
-	//				}
-	//			}
-	//		}
-	//	}
-	//	for (LexemeID id = 0; id < next; ++id) {
-	//		if (counter[id] > 1) {
-	//			Error::ErrPrint(error, Error::Level::ERROR,
-	//				"Grammar has more than 1 production for '" + lex[id] + "'");
-	//			originalGrammarIsValid = false;
-	//		}
-	//	}
-	//	return originalGrammarIsValid;
-	//}
-
 	bool BNFGrammar::OriginalGrammarIsValid(std::ostream& error) const
 	{
 		bool originalGrammarIsValid = true;
 		if (OriginalGrammarContainsInfiniteCycle(error)) {
 			originalGrammarIsValid = false;
 		}
-		if (OriginalGrammarContainsEpsilonProduction(error)) {
+		else {
+			if (OriginalGrammarContainsInvalidEpsilonProduction(error)) {
+				originalGrammarIsValid = false;
+			}
+		}
+		if (ProductionsContainCommonPrefix(error)) {
 			originalGrammarIsValid = false;
 		}
 		return originalGrammarIsValid;
-	} // TODO CHAPTER 3 Parsers, 3.3 TOP-DOWN PARSING, Part "Left-Factoring to Eliminate Backtracking"
+	}
 
-	// original grammar has cycles(A ->+ A)
+	// the original grammar has cycles (A ->+ A)
 	// CHAPTER 3 Parsers, 3.3 TOP-DOWN PARSING, Part "Eliminating Left Recursion", page 102, the first paragraph
 	bool BNFGrammar::OriginalGrammarContainsInfiniteCycle(std::ostream& error) const
 	{
 		bool grammarContainsCycle = false;
-		for (int i = 0; i < prodSet.size(); ++i) {
-			const Production& p = prodSet[i];
+		for (const Production& p : prodSet) {
 			for (const Derived& d : p.derSet) {
 				if (d.size() == 1 && d[0] == p.nt) {
 					Error::ErrPrint(error, Error::Level::ERROR,
-						"Grammar has cycle: " + lex[p.nt] + " -> " + lex[p.nt]);
+						"The original grammar has a direct cycle: " + lex[p.nt] + " -> " + lex[p.nt]);
 					grammarContainsCycle = true;
 				}
 			}
 		}
+		if (CycleIsPresent(error)) {
+			grammarContainsCycle = true;
+		}
 		return grammarContainsCycle;
 	}
 
-	// original grammar has Epsilon-productions
-	// CHAPTER 3 Parsers, 3.3 TOP-DOWN PARSING, Part "Eliminating Left Recursion", page 102, the first paragraph
-	bool BNFGrammar::OriginalGrammarContainsEpsilonProduction(std::ostream& error) const
+	// the original grammar has a cycle (A ->+ A), i.e. A -> Y1, Y1 -> Y2, ..., Yn -> A
+	bool BNFGrammar::CycleIsPresent(std::ostream& error) const
 	{
-		bool grammarContainsEpsilonProduction = false;
+		LexemeID initialProd = FindInitialNonterminal();
+		std::vector<LexemeID> encountered;
+		encountered.push_back(initialProd);
+		std::queue<LexemeID> q;
+		q.push(initialProd);
+		bool cycleIsPresent = false;
+		while (q.size() > 0) {
+			LexemeID id = q.front();
+			q.pop();
+			for (const Production& p : prodSet) {
+				if (p.nt != id) {
+					continue;
+				}
+				for (const Derived& d : p.derSet) {
+					if (d.size() == 1) {
+						if (SetContains(encountered, d[0])) {
+							Error::ErrPrint(error, Error::Level::ERROR,
+								"The original grammar has a cycle: " + lex[d[0]] + " ->+ " + lex[d[0]]);
+							cycleIsPresent = true;
+						}
+						else {
+							encountered.push_back(d[0]);
+							q.push(d[0]);
+						}
+					}
+				}
+			}
+		}
+		return cycleIsPresent;
+	}
+
+	// the original grammar has Epsilon-productions (A ->+ E), A - initial production, E - Epsilon-production
+	// CHAPTER 3 Parsers, 3.3 TOP-DOWN PARSING, Part "Eliminating Left Recursion", page 102, the first paragraph
+	bool BNFGrammar::OriginalGrammarContainsInvalidEpsilonProduction(std::ostream& error) const
+	{
+		if (!EpsilonProductionsContainOnlyEpsilon(error)) {
+			return true;
+		}
+		LexemeID initialProd = FindInitialNonterminal();
+		bool invalidProduction = false;
 		for (int i = 0; i < prodSet.size(); ++i) {
 			const Production& p = prodSet[i];
 			for (const Derived& d : p.derSet) {
 				if (d.size() == 1 && d[0] == idES) {
-					Error::ErrPrint(error, Error::Level::ERROR, "Grammar has Epsilon-productions: "
-						+ lex[p.nt] + " -> " + lexES);
-					grammarContainsEpsilonProduction = true;
+					if (OriginalGrammarContainsChainOfProduction(initialProd, idES)) {
+						Error::ErrPrint(error, Error::Level::ERROR,
+							"The original grammar has an invalid Epsilon-production: "
+							+ lex[p.nt] + " -> " + lexES + ". This leads to "
+							+ lex[initialProd] + " ->+ " + lexES);
+						invalidProduction = true;
+					}
 				}
 			}
 		}
-		return grammarContainsEpsilonProduction;
+		return invalidProduction;
 	}
 
+	// Epsilon-productions contain only Epsilon on the right-hand side
+	bool BNFGrammar::EpsilonProductionsContainOnlyEpsilon(std::ostream& error) const
+	{
+		bool onlyEpsilon = true;
+		for (const Production& p : prodSet) {
+			for (const Derived& d : p.derSet) {
+				if (d.size() == 1) {
+					continue;
+				}
+				for (LexemeID id : d) {
+					if (id == idES) {
+						Error::ErrPrint(error, Error::Level::ERROR,
+							"The original grammar has an invalid Epsilon-production: "
+							+ lex[p.nt] + " -> " + GetLexemeString(d));
+						onlyEpsilon = false;
+					}
+				}
+			}
+		}
+		return onlyEpsilon;
+	}
+
+	LexemeID BNFGrammar::FindInitialNonterminal() const
+	{
+		for (const Production& p : prodSet) {
+			LexemeID nonterminal = p.nt;
+			bool isInitial = true;
+			for (const Production& pp : prodSet) {
+				for (const Derived& dd : pp.derSet) {
+					for (LexemeID id : dd) {
+						if (id == nonterminal) {
+							isInitial = false;
+						}
+					}
+				}
+			}
+			if (isInitial) {
+				return nonterminal;
+			}
+		}
+		throw Error::RuntimeError{ "Initial nonterminal not found" };
+	}
+
+	// the original grammar has a chain of productions (A ->+ B), i.e. A -> Y1, Y1 -> Y2, ..., Yn -> B
+	bool BNFGrammar::OriginalGrammarContainsChainOfProduction(LexemeID from, LexemeID to) const
+	{
+		std::queue<LexemeID> q;
+		q.push(from);
+		while (q.size() > 0) {
+			LexemeID id = q.front();
+			q.pop();
+			for (const Production& p : prodSet) {
+				if (p.nt != id) {
+					continue;
+				}
+				for (const Derived& d : p.derSet) {
+					if (d.size() == 1) {
+						if (d[0] == to) {
+							return true;
+						}
+						else {
+							q.push(d[0]);
+						}
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	// productions for A contain a common prefix on the right-hand side
+	// CHAPTER 3 Parsers, 3.3 TOP-DOWN PARSING, Part "Left-Factoring to Eliminate Backtracking"
+	bool BNFGrammar::ProductionsContainCommonPrefix(std::ostream& error) const
+	{
+		bool commonPrefixIsPresent = false;
+		for (const Production& p : prodSet) {
+			std::vector<LexemeID> prefixes;
+			std::vector<LexemeID> commonPrefixes;
+			for (const Derived& d : p.derSet) {
+				if (p.nt == d[0]) {
+					continue;
+				}
+				if (SetContains(prefixes, d[0])) {
+					if (!SetContains(commonPrefixes, d[0])) {
+						commonPrefixes.push_back(d[0]);
+					}
+					commonPrefixIsPresent = true;
+				}
+				else {
+					prefixes.push_back(d[0]);
+				}
+			}
+			if (commonPrefixes.size() > 0) {
+				for (LexemeID id : commonPrefixes) {
+					Error::ErrPrint(error, Error::Level::ERROR,
+						"The original grammar has productions for \"" + lex[p.nt]
+						+ "\" with a common prefix \"" + lex[id] + "\". You need to do Left-Factoring");
+				}
+			}
+		}
+		return commonPrefixIsPresent;
+	}
+
+	// CHAPTER 3 Parsers, 3.3 TOP-DOWN PARSING, Part "Backtrack-Free Parsing", page 107
 	bool BNFGrammar::TransformedGrammarIsBacktrackFree(std::ostream& error) const
 	{
 		bool grammarIsBacktrackFree = true;
@@ -188,7 +315,8 @@ namespace CFG
 				for (int k = j + 1; k < p.derSet.size(); ++k) {
 					if (j != k && SetsContainIdenticalElements(firstPlusSet[i][j], firstPlusSet[i][k])) {
 						Error::ErrPrint(error, Error::Level::ERROR,
-							"Grammar is not backtrack free. Identical elements are present in the sets:");
+							"The transformed grammar is not free from backtracking. "
+							"Identical elements are present in the sets:");
 						PrintFirstPlusSet(error, i, j);
 						PrintFirstPlusSet(error, i, k);
 						grammarIsBacktrackFree = false;
@@ -296,7 +424,7 @@ namespace CFG
 	void BNFGrammar::TransformGrammar(std::ostream& error)
 	{
 		if (!OriginalGrammarIsValid(error)) {
-			throw std::runtime_error{ "Runtime error" };
+			throw Error::RuntimeError{ "The original grammar is invalid" };
 		}
 		RemoveAllLeftRecursion();
 		FindAllNonterminals();
@@ -304,7 +432,8 @@ namespace CFG
 		FindAllFollowSets();
 		FindAllFirstPlusSets();
 		if (!TransformedGrammarIsBacktrackFree(error)) {
-			throw std::runtime_error{ "Runtime error" };
+			error << std::endl << std::endl << *this << std::endl;
+			throw Error::RuntimeError{ "The transformed grammar is not free from backtracking" };
 		}
 	}
 

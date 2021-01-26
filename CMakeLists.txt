@@ -8,5 +8,5 @@ project ("Regex generator")
 set (CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR}/)
 
 # Include sub-projects.
-#add_subdirectory ("Regex")
+add_subdirectory ("Regex")
 add_subdirectory ("Grammar")

@@ -28,6 +28,14 @@ namespace Error
 		explicit RuntimeError(const std::string& message) : ExceptionBase(message.c_str()) {}
 		explicit RuntimeError(const char* message) : ExceptionBase(message) {}
 	};
+
+	class InvalidRegex : public RuntimeError {
+	public:
+		using ExceptionBase = RuntimeError;
+
+		explicit InvalidRegex(const std::string& message) : ExceptionBase(message.c_str()) {}
+		explicit InvalidRegex(const char* message) : ExceptionBase(message) {}
+	};
 }
 
 #endif // ERROR_HPP

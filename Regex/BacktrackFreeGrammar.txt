@@ -1,0 +1,61 @@
+// Next line in order separated by a space: 'marker NT' 'marker derived' 'terminal extension suffix' 'empty string token (Epsilon-production)' 'END OF FILE token'
+## $$ ' EMPTYSTRING EOF
+## Goal                     $$ Alternation
+## Alternation              $$ Concatenation Alternation'
+## Alternation'             $$ | Concatenation Alternation'
+                            $$ EMPTYSTRING
+## Concatenation            $$ Symbol Concatenation'
+## Concatenation'           $$ Symbol Concatenation'
+                            $$ EMPTYSTRING
+## Symbol                   $$ Block Closure
+## Block                    $$ ( Alternation )
+                            $$ LITERAL
+## Closure                  $$ *
+                            $$ +
+                            $$ ?
+                            $$ EMPTYSTRING
+
+
+FIRST(EMPTYSTRING): EMPTYSTRING
+FIRST(EOF): EOF
+FIRST(Goal): ( LITERAL
+FIRST(Alternation): ( LITERAL
+FIRST(|): |
+FIRST(Concatenation): ( LITERAL
+FIRST(Symbol): ( LITERAL
+FIRST(Block): ( LITERAL
+FIRST(Closure): * + ? EMPTYSTRING
+FIRST((): (
+FIRST()): )
+FIRST(LITERAL): LITERAL
+FIRST(*): *
+FIRST(+): +
+FIRST(?): ?
+FIRST(Alternation'): | EMPTYSTRING
+FIRST(Concatenation'): EMPTYSTRING ( LITERAL
+
+
+FOLLOW(Goal): EOF
+FOLLOW(Alternation): ) EOF
+FOLLOW(Concatenation): | ) EOF
+FOLLOW(Symbol): | ( LITERAL ) EOF
+FOLLOW(Block): | ( LITERAL * + ? ) EOF
+FOLLOW(Closure): | ( LITERAL ) EOF
+FOLLOW(Alternation'): ) EOF
+FOLLOW(Concatenation'): | ) EOF
+
+
+FIRST+(Goal -> Alternation): ( LITERAL
+FIRST+(Alternation -> Concatenation Alternation'): ( LITERAL
+FIRST+(Alternation' -> | Concatenation Alternation'): |
+FIRST+(Alternation' -> EMPTYSTRING): EMPTYSTRING ) EOF
+FIRST+(Concatenation -> Symbol Concatenation'): ( LITERAL
+FIRST+(Concatenation' -> Symbol Concatenation'): ( LITERAL
+FIRST+(Concatenation' -> EMPTYSTRING): EMPTYSTRING | ) EOF
+FIRST+(Symbol -> Block Closure): ( LITERAL
+FIRST+(Block -> ( Alternation )): (
+FIRST+(Block -> LITERAL): LITERAL
+FIRST+(Closure -> *): *
+FIRST+(Closure -> +): +
+FIRST+(Closure -> ?): ?
+FIRST+(Closure -> EMPTYSTRING): EMPTYSTRING | ( LITERAL ) EOF

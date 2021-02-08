@@ -4,7 +4,9 @@
 #include<iomanip>
 #include<string>
 #include<vector>
+#include<set>
 #include<memory>
+#include"printFA.hpp"
 #include"../Error/error.hpp"
 #include"regexpr.hpp"
 
@@ -33,7 +35,6 @@ int main()
 		//	return 1;
 		//}
 		RE::Regexp regex{ rs };
-		regex.PrintNFA(std::cout);
 
 		std::cout << std::endl << "Success!" << std::endl;
 		return 0;
@@ -55,7 +56,7 @@ namespace RE
 	NFAnode* NFAnode::ptr = nullptr;
 	std::allocator<NFAnode> NFA::alloc;
 
-	void NFA::AddNodeToSet(std::vector<NFAnode*>& set, NFAnode* node) const
+	void NFA::AddNodeToSet(std::vector<NFAnode*>& set, NFAnode* node) const // TODO member?
 	{
 		if (node == nullptr || node->mark == true) {
 			return;
@@ -177,6 +178,8 @@ namespace RE
 		last->succ1 = first;
 		last->succ2 = newLast;
 		last->ty = NFAnode::Type::EPSILON;
+		first = newFirst;
+		last = newLast;
 		sz += 2;
 	}
 
@@ -199,20 +202,41 @@ namespace RE
 		}
 	}
 
+#if PRINTFA
+	void Regexp::MakeDFA()
+	{
+		std::cout << std::endl << "RE: " << this->source << std::endl;
+		REtoNFA();
+		PrintNFA(std::cout, *this);
+		NFAtoDFA();
+		PrintDFA(std::cout, *this);
+		MinimizeDFA();
+		PrintDFA(std::cout, *this);
+	}
+#else
 	void Regexp::MakeDFA()
 	{
 		REtoNFA();
 		NFAtoDFA();
 		MinimizeDFA();
 	}
+#endif // PRINTFA
 
+	// Thompson’s Construction
+	// CHAPTER 2 Scanners, 2.4 FROM REGULAR EXPRESSION TO SCANNER, 2.4.2 Regular Expression to NFA: Thompson’s Construction
 	void Regexp::REtoNFA()
 	{
 		nfa = PGoal();
 	}
 
+	// Subset Construction
+	// CHAPTER 2 Scanners, 2.4 FROM REGULAR EXPRESSION TO SCANNER, 2.4.3 NFA to DFA: The Subset Construction
 	void Regexp::NFAtoDFA()
 	{
+
+
+
+
 
 	}
 
@@ -388,46 +412,6 @@ namespace RE
 		: ts{ string }
 	{
 		PutRE(string);
-	}
-
-	void Regexp::PrintNFA(std::ostream& os) const
-	{
-		if (nfa.sz == 0) {
-			os << "The number of NFA nodes is 0" << std::endl;
-			return;
-		}
-		const std::string dl{ "--------------------------------------------------------------------------------" }; // dash line
-		const std::string cs{ "| " };		// column start
-		const std::string ce{ " |" };		// column end
-		constexpr int cw1{ 6 };				// column width 1
-		const size_t cw2{ dl.size() - cw1 - cs.size() * 2 - ce.size() };
-
-		os << std::endl << dl << std::endl;
-		os << cs << std::setw(cw1) << std::left << "#"
-			<< cs << std::setw(cw2) << "NFA" << ce << std::endl << dl << std::endl;
-		std::vector<NFAnode*> nodes;
-		nodes.reserve(nfa.sz);
-		nfa.AddNodeToSet(nodes, nfa.first);
-		for (int i = 0; i < nodes.size(); ++i) {
-			NFAnode* p = nodes[i];
-			p->mark = false;
-			os << cs << std::setw(cw1) << i + 1 << cs;
-			switch (p->ty) {
-			case RE::NFAnode::Type::LETTER:
-				os << std::setw(cw2) << char(p->ch) << ce << std::endl << dl << std::endl;
-				break;
-			case RE::NFAnode::Type::EPSILON:
-				os << std::setw(cw2) << char(p->ch) << ce << std::endl << dl << std::endl;
-				break;
-			case RE::NFAnode::Type::ACCEPT:
-				os << std::setw(cw2) << char(p->ch) << ce << std::endl << dl << std::endl;
-				break;
-			default:
-				os << "Unknown RE::NFAnode::Type" << std::endl;
-				break;
-			}
-		}
-		// TODO
 	}
 
 	void Regexp::PutRE(const REstring& string)

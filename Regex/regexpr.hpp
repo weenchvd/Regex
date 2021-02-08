@@ -26,7 +26,6 @@ namespace RE
 		Character ch;
 		Type ty;
 		bool mark;
-		// static
 		static NFAnode* ptr;
 	public:
 		NFAnode(Type type, Character character = 0)
@@ -37,7 +36,6 @@ namespace RE
 		NFAnode* first;
 		NFAnode* last;
 		size_t sz;
-		// static
 		static std::allocator<NFAnode> alloc;
 	private:
 		// const members
@@ -47,8 +45,11 @@ namespace RE
 		void ReleaseResources();
 		NFAnode* CreateNFANode(NFAnode::Type type);
 		NFAnode* CreateNFANode(NFAnode::Type type, Character character);
-		
-		friend class Regexp;
+
+		// friends
+#if PRINTFA
+		friend void PrintNFA(std::ostream& os, const RE::Regexp& re);
+#endif // PRINTFA
 	public:
 		NFA(Character character);
 		~NFA();
@@ -68,6 +69,7 @@ namespace RE
 	};
 
 	using REstring = std::string;
+	using Qset = std::set<NFAnode*>;
 
 	class Regexp {
 		class TokenStream {
@@ -118,12 +120,15 @@ namespace RE
 	public:
 		Regexp(const REstring& string);
 		// const members
-		void PrintNFA(std::ostream& os) const;
 
 		// nonconst members
 		void PutRE(const REstring& string);
 
 		// friends
+#if PRINTFA
+		friend void PrintNFA(std::ostream& os, const RE::Regexp& re);
+		friend void PrintDFA(std::ostream& os, const RE::Regexp& re);
+#endif // PRINTFA
 	};
 
 	std::istream& operator>>(std::istream& is, REstring& string);

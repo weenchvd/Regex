@@ -9,7 +9,7 @@ set (CMAKE_CXX_STANDARD 14)
 set (CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR}/..)
 
 set (FILE_NAME regexpr)
-set (SOURCE_CXX_LIST ${FILE_NAME}.cpp ../Error/error.cpp)
+set (SOURCE_CXX_LIST ${FILE_NAME}.cpp ../Error/error.cpp printFA.cpp)
 
 # Add source to this project's executable.
 add_executable (${FILE_NAME} ${SOURCE_CXX_LIST})

@@ -5,6 +5,8 @@
 #include<string>
 #include<vector>
 #include<set>
+#include<queue>
+#include<algorithm>
 #include<memory>
 #include"printFA.hpp"
 #include"../Error/error.hpp"
@@ -56,7 +58,7 @@ namespace RE
 	NFAnode* NFAnode::ptr = nullptr;
 	std::allocator<NFAnode> NFA::alloc;
 
-	void NFA::AddNodeToSet(std::vector<NFAnode*>& set, NFAnode* node) const // TODO member?
+	void NFA::AddNodeToSet(std::vector<NFAnode*>& set, NFAnode* node) const
 	{
 		if (node == nullptr || node->mark == true) {
 			return;
@@ -78,7 +80,7 @@ namespace RE
 		}
 	}
 
-	NFAnode* NFA::CreateNFANode(NFAnode::Type type)
+	NFAnode* NFA::CreateNFANode(NFAnode::Type type) const
 	{
 		NFAnode* p = alloc.allocate(1, NFAnode::ptr);
 		if (p == nullptr) {
@@ -89,7 +91,7 @@ namespace RE
 		return p;
 	}
 
-	NFAnode* NFA::CreateNFANode(NFAnode::Type type, Character character)
+	NFAnode* NFA::CreateNFANode(NFAnode::Type type, Character character) const
 	{
 		NFAnode* p = alloc.allocate(1, NFAnode::ptr);
 		if (p == nullptr) {
@@ -103,7 +105,7 @@ namespace RE
 	NFA::NFA(Character character)
 		: sz{ 2 }
 	{
-		first = CreateNFANode(NFAnode::Type::LETTER, character);
+		first = CreateNFANode(NFAnode::Type::LITERAL, character);
 		last = CreateNFANode(NFAnode::Type::ACCEPT);
 		first->succ1 = last;
 	}
@@ -183,7 +185,83 @@ namespace RE
 		sz += 2;
 	}
 
-	std::pair<Character, Regexp::TokenStream::TokenType> Regexp::TokenStream::GetToken() const
+	//----------------------------------------------------------------------------------------------------
+
+	bool operator<(const std::pair<Character, DFAnode*>& a, const std::pair<Character, DFAnode*>& b)
+	{
+		return (a.first < b.first) ? true : false;
+	}
+
+	DFAnode* DFAnode::ptr = nullptr;
+	std::allocator<DFAnode> DFA::alloc;
+
+	void DFA::AddNodeToSet(std::vector<DFAnode*>& set, DFAnode* node) const
+	{
+		if (node == nullptr || node->mark == true) {
+			return;
+		}
+		set.push_back(node);
+		node->mark = true;
+		for (auto& p : node->trans) {
+			AddNodeToSet(set, p.second);
+		}
+	}
+
+	void DFA::ReleaseResources()
+	{
+		std::vector<DFAnode*> nodes;
+		nodes.reserve(sz);
+		AddNodeToSet(nodes, first);
+		for (DFAnode* p : nodes) {
+			alloc.destroy(p);
+			alloc.deallocate(p, 1);
+		}
+	}
+
+	DFAnode* DFA::CreateDFANode(bool accept) const
+	{
+		DFAnode* p = alloc.allocate(1, DFAnode::ptr);
+		if (p == nullptr) {
+			throw Error::RuntimeError{ "No memory allocated for DFA node" };
+		}
+		DFAnode::ptr = p;
+		alloc.construct(p, accept);
+		return p;
+	}
+
+	DFA::~DFA()
+	{
+		if (sz > 0) {
+			ReleaseResources();
+		}
+	}
+
+	DFA::DFA(DFA&& other)
+	{
+		first = other.first;
+		sz = other.sz;
+		other.first = nullptr;
+		other.sz = 0;
+	}
+
+	DFA& DFA::operator=(DFA&& other)
+	{
+		if (this == &other) {
+			return *this;
+		}
+		if (sz > 0) {
+			ReleaseResources();
+		}
+		first = other.first;
+		sz = other.sz;
+		other.first = nullptr;
+		other.sz = 0;
+		return *this;
+	}
+
+	//----------------------------------------------------------------------------------------------------
+
+	std::pair<Character, Regexp::TokenStream::TokenType> Regexp::TokenStream::GetToken()
 	{
 		if (pos >= s.size()) {
 			return { 0, TokenType::EOS };
@@ -198,8 +276,58 @@ namespace RE
 		case '?':
 			return { ch, TokenType::SPECIAL };
 		default:
+			alphabet.emplace(ch);
 			return { ch, TokenType::LITERAL };
 		}
+	}
+
+	NFAset Regexp::Delta(const NFAset& set, Character ch) const
+	{
+		NFAset newSet;
+		for (NFAnode* p : set) {
+			if (p->ch == ch) {
+				newSet.emplace(p->succ1);
+			}
+		}
+		return newSet;
+	}
+
+	NFAset Regexp::EpsilonClosure(NFAset set) const
+	{
+		NFAset newSet{ set.begin(), set.end() };
+		for (NFAnode* p : set) {
+			AddNodesReachableViaEpsilonTransition(newSet, p);
+		}
+		return newSet;
+	}
+
+	void Regexp::AddNodesReachableViaEpsilonTransition(NFAset& set, const NFAnode* node) const
+	{
+		if (node->ty == NFAnode::Type::EPSILON) {
+			set.emplace(node->succ1);
+			AddNodesReachableViaEpsilonTransition(set, node->succ1);
+			if (node->succ2 != nullptr) {
+				set.emplace(node->succ2);
+				AddNodesReachableViaEpsilonTransition(set, node->succ2);
+			}
+		}
+	}
+
+	bool Regexp::Equal(const NFAset& a, const NFAset& b) const
+	{
+		if (a.size() != b.size()) {
+			return false;
+		}
+		NFAset::iterator itA = a.begin();
+		NFAset::iterator itB = b.begin();
+		while (itA != a.end()) {
+			if (*itA != *itB) {
+				return false;
+			}
+			++itA;
+			++itB;
+		}
+		return true;
 	}
 
 #if PRINTFA
@@ -209,8 +337,10 @@ namespace RE
 		REtoNFA();
 		PrintNFA(std::cout, *this);
 		NFAtoDFA();
+		std::cout << std::endl << "RE: " << this->source << std::endl;
 		PrintDFA(std::cout, *this);
 		MinimizeDFA();
+		std::cout << std::endl << "RE: " << this->source << std::endl;
 		PrintDFA(std::cout, *this);
 	}
 #else
@@ -227,17 +357,71 @@ namespace RE
 	void Regexp::REtoNFA()
 	{
 		nfa = PGoal();
+		auto p = ts.GetAlphabet();
+		alphabet.insert(alphabet.end(), p.first, p.second);
+		std::sort(alphabet.begin(), alphabet.end());
+		ts.EraseAlphabet();
 	}
 
 	// Subset Construction
 	// CHAPTER 2 Scanners, 2.4 FROM REGULAR EXPRESSION TO SCANNER, 2.4.3 NFA to DFA: The Subset Construction
+	// FIGURE 2.6 The Subset Construction
 	void Regexp::NFAtoDFA()
 	{
-
-
-
-
-
+		TableEntry first;
+		first.state = EpsilonClosure(NFAset{ {nfa.GetFirstNode()} });
+		first.trans.resize(alphabet.size());
+		Table table;
+		table.push_back(first);
+		std::queue<TableIndex> workList;
+		workList.push(0);
+		while (workList.size() > 0) {
+			TableIndex i = workList.front();
+			workList.pop();
+			for (size_t k = 0; k < alphabet.size(); ++k) {
+				NFAset newSet = EpsilonClosure(Delta(table[i].state, alphabet[k]));
+				if (newSet.size() == 0) {
+					table[i].trans[k] = noTransition;
+					continue;
+				}
+				bool inTable = false;
+				for (TableIndex j = 0; j < table.size(); ++j) {
+					if (Equal(table[j].state, newSet)) {
+						table[i].trans[k] = j;
+						inTable = true;
+					}
+				}
+				if (inTable == false) {
+					TableEntry newEntry;
+					newEntry.state = newSet;
+					newEntry.trans.resize(alphabet.size());
+					table.push_back(newEntry);
+					TableIndex newIndex = table.size() - 1;
+					workList.push(newIndex);
+					table[i].trans[k] = newIndex;
+				}
+			}
+		}
+		std::vector<DFAnode*> nodes;
+		nodes.reserve(table.size());
+		NFAnode* accepted = nfa.GetLastNode();
+		for (TableIndex i = 0; i < table.size(); ++i) {
+			TableEntry& entry = table[i];
+			NFAset::iterator it = entry.state.find(accepted);
+			nodes.push_back(dfa.CreateDFANode((it == entry.state.end()) ? false : true));
+		}
+		for (TableIndex i = 0; i < table.size(); ++i) {
+			TableEntry& entry = table[i];
+			for (size_t j = 0; j < entry.trans.size(); ++j) {
+				TableIndex index = entry.trans[j];
+				if (index == noTransition) {
+					continue;
+				}
+				nodes[i]->trans.push_back(std::pair<Character, DFAnode*>{ alphabet[j], nodes[index] });
+			}
+		}
+		dfa.first = nodes[0];
+		dfa.sz = table.size();
 	}
 
 	void Regexp::MinimizeDFA()

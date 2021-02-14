@@ -26,7 +26,7 @@ namespace RE
 		Character ch;						// character
 		Type ty;							// type
 		bool mark;
-		static NFAnode* ptr;
+		static NFAnode* hint;
 	public:
 		NFAnode(Type type, Character character = 0)
 			: succ1{ nullptr }, succ2{ nullptr }, ch{ character }, ty{ type }, mark{ false } {}
@@ -39,9 +39,10 @@ namespace RE
 		static std::allocator<NFAnode> alloc;
 	private:
 		// const members
+		std::vector<NFAnode*> GetAllNodes() const;
 		void AddNodeToSet(std::vector<NFAnode*>& set, NFAnode* node) const;
-		NFAnode* CreateNFANode(NFAnode::Type type) const;
-		NFAnode* CreateNFANode(NFAnode::Type type, Character character) const;
+		NFAnode* CreateNFANode(const NFAnode::Type type) const;
+		NFAnode* CreateNFANode(const NFAnode::Type type, const Character character) const;
 
 		// nonconst members
 		void ReleaseResources();
@@ -51,7 +52,7 @@ namespace RE
 		friend void PrintNFA(std::ostream& os, const RE::Regexp& re);
 #endif // PRINTFA
 	public:
-		NFA(Character character);
+		NFA(const Character character);
 		~NFA();
 
 		NFA(const NFA& other) = delete;
@@ -70,18 +71,27 @@ namespace RE
 		void ClosureKleene();
 	};
 
+	///----------------------------------------------------------------------------------------------------
+
+	struct DFAnode;
+
+	using Transition = std::pair<Character, DFAnode*>;
+	using TransitionTable = std::vector<Transition>;
+
+	struct LessTransitionCharacter {
+		bool operator()(const Transition& t, Character ch) { return t.first < ch; }
+	};
+
 	struct DFAnode {
 	public:
-		std::vector<std::pair<Character, DFAnode*>> trans;		// transitions
-		bool acc;												// accept
+		TransitionTable trans;				// table of transitions
+		bool acc;							// accept
 		bool mark;
-		static DFAnode* ptr;
+		static DFAnode* hint;
 	public:
 		DFAnode(bool accept)
 			: acc{ accept }, mark{ false } {}
 	};
-
-	bool operator<(const std::pair<Character, DFAnode*>& a, const std::pair<Character, DFAnode*>& b);
 
 	class DFA {
 		DFAnode* first;
@@ -89,8 +99,9 @@ namespace RE
 		static std::allocator<DFAnode> alloc;
 	private:
 		// const members
+		std::vector<DFAnode*> GetAllNodes() const;
 		void AddNodeToSet(std::vector<DFAnode*>& set, DFAnode* node) const;
-		DFAnode* CreateDFANode(bool accept) const;
+		DFAnode* CreateDFANode(const bool accept) const;
 
 		// nonconst members
 		void ReleaseResources();
@@ -114,18 +125,21 @@ namespace RE
 		size_t Size() const { return sz; }
 	};
 
-	using NFAset = std::set<NFAnode*>;
-	using TableIndex = long long int;
-	constexpr TableIndex noTransition = -1;
+	///----------------------------------------------------------------------------------------------------
+	
+	using SubsetTableIndex = long long int;
+	constexpr SubsetTableIndex noTransition = -1;
 
-	struct TableEntry {
-		NFAset state;						// set of NFAnode*
-		std::vector<TableIndex> trans;	// transitions
+	struct SubsetTableEntry {
+		const std::set<const NFAnode*> state;					// set of NFAnode*
+		std::vector<SubsetTableIndex> trans;					// transitions to SubsetTableEntry
 	};
 
-	using Table = std::vector<TableEntry>;
+	using SubsetTable = std::vector<SubsetTableEntry>;
 
 	using REstring = std::string;
+	using Number = size_t;
+	using SetPartition = std::vector<std::vector<DFAnode*>>;
 
 	class Regexp {
 		class TokenStream {
@@ -150,30 +164,36 @@ namespace RE
 			}
 
 			// nonconst members
-			std::pair<Character, TokenType> GetToken();
+			std::pair<const Character, const TokenType> GetToken();
 			void Advance() { ++pos; }
-			std::pair<Character, TokenType> AdvanceAndGetToken() { Advance(); return GetToken(); }
+			std::pair<const Character, const TokenType> AdvanceAndGetToken() { Advance(); return GetToken(); }
 			void EraseAlphabet() { alphabet.clear(); }
 		};
 	private:
 		REstring source;
 		TokenStream ts;
-		std::pair<Character, Regexp::TokenStream::TokenType> token;
+		std::pair<Character, TokenStream::TokenType> token;
 		std::vector<Character> alphabet;
 		NFA nfa{ 0 };
 		DFA dfa;
 	private:
 		// const members
-		NFAset Delta(const NFAset& set, Character ch) const;
-		NFAset EpsilonClosure(NFAset set) const;
-		void AddNodesReachableViaEpsilonTransition(NFAset& set, const NFAnode* node) const;
-		bool Equal(const NFAset& a, const NFAset& b) const;
+		std::set<const NFAnode*> Delta(const std::set<const NFAnode*>& set, const Character ch) const;
+		std::set<const NFAnode*> EpsilonClosure(const std::set<const NFAnode*>& set) const;
+		void AddNodesReachableViaEpsilonTransition(std::set<const NFAnode*>& set, const NFAnode* node) const;
+		bool Equal(const std::set<const NFAnode*>& a, const std::set<const NFAnode*>& b) const;
+		std::pair<std::vector<DFAnode*>, std::vector<DFAnode*>> Split(const std::vector<DFAnode*>& set,
+			const std::unordered_map<const DFAnode*, Number> numbers) const;
+		const DFAnode* FindTransition(const DFAnode* node, const Character ch) const;
+		bool TransitionExists(const DFAnode* node) const { return (node == nullptr) ? false : true; }
+		DFA CreateMinimalDFA(const SetPartition& sp,
+			const std::unordered_map<const DFAnode*, Number> numbers) const;
 
 		// nonconst members
 		void MakeDFA();
 		void REtoNFA();
-		void NFAtoDFA();
-		void MinimizeDFA();
+		std::vector<DFAnode*> NFAtoDFA();
+		void MinimizeDFA(const std::vector<DFAnode*> nodes);
 	private:
 		// Parsing
 		 NFA PGoal();
@@ -184,7 +204,7 @@ namespace RE
 		 NFA PSymbol();
 		 NFA PBlock();
 		void PClosure(NFA& a);
-		void ThrowInvalidRegex(size_t position) const;
+		void ThrowInvalidRegex(const size_t position) const;
 	public:
 		Regexp(const REstring& string);
 		// const members

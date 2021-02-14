@@ -4,7 +4,7 @@
 #include<string>
 #include<vector>
 #include<set>
-#include<map>
+#include<unordered_map>
 #include"printFA.hpp"
 #include"../Error/error.hpp"
 #include"regexpr.hpp"
@@ -20,43 +20,38 @@ namespace RE
 			os << "The number of NFA nodes is 0" << std::endl;
 			return;
 		}
-		std::vector<NFAnode*> nodes;
-		nodes.reserve(re.nfa.sz);
-		re.nfa.AddNodeToSet(nodes, re.nfa.first);
-		for (NFAnode* p : nodes) {
-			p->mark = false;
-		}
-		std::map<NFAnode*, size_t> numbers;
+		const std::vector<NFAnode*> nodes = re.nfa.GetAllNodes();
+		std::unordered_map<const NFAnode*, const Number> numbers;
 		for (size_t i = 0; i < nodes.size(); ++i) {
 			numbers.emplace(nodes[i], i + 1);
 		}
 		if (nodes.size() != numbers.size()) {
 			throw Error::RuntimeError{ "PrintNFA: nodes.size() != numbers.size()" };
 		}
-		size_t nDigits{ 0 };				// number of digits
+		size_t nDigits{ 0 };									// number of digits
 		size_t n{ nodes.size() };
 		while (n > 0) {
 			++nDigits;
 			n /= 10;
 		}
 
-		std::string dl;						// dash line
-		const std::string sep{ "|" };		// separtor
-		const std::string sp{ " " };		// space
+		std::string dl;											// dash line
+		const std::string sep{ "|" };							// separtor
+		const std::string sp{ " " };							// space
 		const std::string accept{ "ACCEPT" };
 		const std::string start{ "START" };
-		const std::string to{ "->" };
-		const std::string ns{ "#" };		// number sign
-		const std::string eps{ "Eps" };
-		const size_t nLetters{ eps.size() };
+		const std::string to{ "->" };							// transition mark
+		const std::string ns{ "#" };							// number sign
+		const std::string eps{ "Eps" };							// Epsilon mark
+		const size_t nLetters{ eps.size() };					// number of letters
 		const size_t cw1{ sp.size() + ((accept.size() > start.size()) ? accept.size() : start.size()) + sp.size() }; // column width 1
-		const size_t cw2{ sizeof(NFAnode*) * 2 };
-		const size_t cw3{ sp.size() + ns.size() + nDigits + sp.size() };
-		const size_t cw4{ sp.size() + nLetters + sp.size() + to.size() + sp.size() + ns.size() + nDigits + sp.size() };
-		const size_t cw5{ cw2 };
+		const size_t cw2{ sizeof(NFAnode*) * 2 }; // column width 2
+		const size_t cw3{ sp.size() + ns.size() + nDigits + sp.size() }; // column width 3
+		const size_t cw4{ sp.size() + nLetters + sp.size() + to.size() + sp.size() + ns.size() + nDigits + sp.size() }; // column width 4
+		const size_t cw5{ cw2 }; // column width 5
 
-		size_t nDashes{ sep.size() * 6 + cw1 + cw2 + cw3 + cw4 + cw5 };
-		for (int i = 0; i < nDashes; ++i) {
+		const size_t nDashes{ sep.size() * 6 + cw1 + cw2 + cw3 + cw4 + cw5 }; // number of dashes
+		for (size_t i = 0; i < nDashes; ++i) {
 			dl += "-";
 		}
 
@@ -65,8 +60,8 @@ namespace RE
 			<< std::setw(dl.size() - sep.size() - cw1 - sep.size() - 1 - sep.size()) << std::left << "NFA" << sep
 			<< std::endl << dl << std::endl;
 
-		for (int i = 0; i < nodes.size(); ++i) {
-			NFAnode* p = nodes[i];
+		for (size_t i = 0; i < nodes.size(); ++i) {
+			const NFAnode* p = nodes[i];
 			auto it = numbers.find(p);
 			if (p == re.nfa.first) {
 				os << sep << sp << std::setw(cw1 - sp.size()) << start << sep;
@@ -129,42 +124,37 @@ namespace RE
 			os << "The number of DFA nodes is 0" << std::endl;
 			return;
 		}
-		std::vector<DFAnode*> nodes;
-		nodes.reserve(re.dfa.sz);
-		re.dfa.AddNodeToSet(nodes, re.dfa.first);
-		for (DFAnode* p : nodes) {
-			p->mark = false;
-		}
-		std::map<DFAnode*, size_t> numbers;
+		const std::vector<DFAnode*> nodes = re.dfa.GetAllNodes();
+		std::unordered_map<const DFAnode*, const Number> numbers;
 		for (size_t i = 0; i < nodes.size(); ++i) {
 			numbers.emplace(nodes[i], i + 1);
 		}
 		if (nodes.size() != numbers.size()) {
 			throw Error::RuntimeError{ "PrintDFA: nodes.size() != numbers.size()" };
 		}
-		size_t nDigits{ 0 };				// number of digits
+		size_t nDigits{ 0 };									// number of digits
 		size_t n{ nodes.size() };
 		while (n > 0) {
 			++nDigits;
 			n /= 10;
 		}
 
-		std::string dl;						// dash line
-		const std::string sep{ "|" };		// separtor
-		const std::string sp{ " " };		// space
+		std::string dl;											// dash line
+		const std::string sep{ "|" };							// separtor
+		const std::string sp{ " " };							// space
 		const std::string accept{ "ACCEPT" };
 		const std::string start{ "START" };
-		const std::string to{ "->" };
-		const std::string ns{ "#" };		// number sign
-		const size_t nLetters{ 1 };
+		const std::string to{ "->" };							// transition mark
+		const std::string ns{ "#" };							// number sign
+		const size_t nLetters{ 1 };								// number of letters
 		const size_t cw1{ sp.size() + ((accept.size() > start.size()) ? accept.size() : start.size()) + sp.size() }; // column width 1
 		const size_t cw2{ sizeof(DFAnode*) * 2 }; // column width 2
 		const size_t cw3{ sp.size() + ns.size() + nDigits + sp.size() }; // column width 3
 		const size_t cw4{ sp.size() + nLetters + sp.size() + to.size() + sp.size() + ns.size() + nDigits + sp.size() }; // column width 4
 		const size_t cw5{ cw2 }; // column width 5
 
-		size_t nDashes{ sep.size() * 6 + cw1 + cw2 + cw3 + cw4 + cw5 };
-		for (int i = 0; i < nDashes; ++i) {
+		const size_t nDashes{ sep.size() * 6 + cw1 + cw2 + cw3 + cw4 + cw5 }; // number of dashes
+		for (size_t i = 0; i < nDashes; ++i) {
 			dl += "-";
 		}
 
@@ -173,8 +163,8 @@ namespace RE
 			<< std::setw(dl.size() - sep.size() - cw1 - sep.size() - 1 - sep.size()) << std::left << "DFA" << sep
 			<< std::endl << dl << std::endl;
 
-		for (int i = 0; i < nodes.size(); ++i) {
-			DFAnode* p = nodes[i];
+		for (size_t i = 0; i < nodes.size(); ++i) {
+			const DFAnode* p = nodes[i];
 			auto it = numbers.find(p);
 			if (p == re.dfa.first) {
 				os << sep << sp << std::setw(cw1 - sp.size()) << start << sep;
@@ -188,7 +178,7 @@ namespace RE
 			os << std::setw(cw2) << p << sep
 				<< sp << ns << std::setw(cw3 - sp.size() - ns.size()) << it->second << sep
 				<< std::setw(cw4 + sep.size() + cw5) << sp << sep << std::endl;
-			for (auto& t : p->trans) {
+			for (const Transition& t : p->trans) {
 				std::ostringstream oss;
 				oss << sp << std::setw(nLetters) << char(t.first) << sp
 					<< to << sp << ns << numbers.find(t.second)->second;

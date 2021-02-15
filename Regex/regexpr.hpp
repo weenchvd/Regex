@@ -41,11 +41,9 @@ namespace RE
 		// const members
 		std::vector<NFAnode*> GetAllNodes() const;
 		void AddNodeToSet(std::vector<NFAnode*>& set, NFAnode* node) const;
+		void ReleaseResources() const;
 		NFAnode* CreateNFANode(const NFAnode::Type type) const;
 		NFAnode* CreateNFANode(const NFAnode::Type type, const Character character) const;
-
-		// nonconst members
-		void ReleaseResources();
 
 		// friends
 #if PRINTFA
@@ -101,10 +99,8 @@ namespace RE
 		// const members
 		std::vector<DFAnode*> GetAllNodes() const;
 		void AddNodeToSet(std::vector<DFAnode*>& set, DFAnode* node) const;
+		void ReleaseResources() const;
 		DFAnode* CreateDFANode(const bool accept) const;
-
-		// nonconst members
-		void ReleaseResources();
 
 		// friends
 		friend class Regexp;
@@ -150,12 +146,18 @@ namespace RE
 				LITERAL						// character, letter, symbol
 			};
 		private:
-			const REstring& s;
+			REstring& s;
 			size_t pos;
 			std::set<Character> alphabet;
 		public:
-			TokenStream(const REstring& string)
+			TokenStream(REstring& string)
 				: s{ string }, pos{ 0 } {}
+
+			TokenStream(const TokenStream& other) = delete;
+			TokenStream& operator=(const TokenStream&& other) = delete;
+			TokenStream(TokenStream& other) = delete;
+			TokenStream& operator=(TokenStream&& other);
+
 			// const members
 			size_t GetPosition() const { return pos; }
 			std::pair<std::set<Character>::iterator, std::set<Character>::iterator> GetAlphabet() const
@@ -164,9 +166,9 @@ namespace RE
 			}
 
 			// nonconst members
-			std::pair<const Character, const TokenType> GetToken();
+			std::pair<Character, TokenType> GetToken();
 			void Advance() { ++pos; }
-			std::pair<const Character, const TokenType> AdvanceAndGetToken() { Advance(); return GetToken(); }
+			std::pair<Character, TokenType> AdvanceAndGetToken() { Advance(); return GetToken(); }
 			void EraseAlphabet() { alphabet.clear(); }
 		};
 	private:
@@ -174,7 +176,7 @@ namespace RE
 		TokenStream ts;
 		std::pair<Character, TokenStream::TokenType> token;
 		std::vector<Character> alphabet;
-		NFA nfa{ 0 };
+		NFA nfa;
 		DFA dfa;
 	private:
 		// const members
@@ -183,11 +185,11 @@ namespace RE
 		void AddNodesReachableViaEpsilonTransition(std::set<const NFAnode*>& set, const NFAnode* node) const;
 		bool Equal(const std::set<const NFAnode*>& a, const std::set<const NFAnode*>& b) const;
 		std::pair<std::vector<DFAnode*>, std::vector<DFAnode*>> Split(const std::vector<DFAnode*>& set,
-			const std::unordered_map<const DFAnode*, Number> numbers) const;
+			const std::unordered_map<const DFAnode*, Number>& numbers) const;
 		const DFAnode* FindTransition(const DFAnode* node, const Character ch) const;
 		bool TransitionExists(const DFAnode* node) const { return (node == nullptr) ? false : true; }
 		DFA CreateMinimalDFA(const SetPartition& sp,
-			const std::unordered_map<const DFAnode*, Number> numbers) const;
+			const std::unordered_map<const DFAnode*, Number>& numbers) const;
 
 		// nonconst members
 		void MakeDFA();
@@ -207,7 +209,11 @@ namespace RE
 		void ThrowInvalidRegex(const size_t position) const;
 	public:
 		Regexp(const REstring& string);
-		// const members
+
+		Regexp(const Regexp& other) = delete;
+		Regexp& operator=(const Regexp& other) = delete;
+		Regexp(Regexp&& other) = delete;
+		Regexp& operator=(Regexp&& other) = delete;
 
 		// nonconst members
 		void PutRE(const REstring& string);

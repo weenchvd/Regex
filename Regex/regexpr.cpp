@@ -81,7 +81,7 @@ namespace RE
 		AddNodeToSet(set, node->succ2);
 	}
 
-	void NFA::ReleaseResources()
+	void NFA::ReleaseResources() const
 	{
 		std::vector<NFAnode*> nodes = GetAllNodes();
 		for (NFAnode* p : nodes) {
@@ -223,7 +223,7 @@ namespace RE
 		}
 	}
 
-	void DFA::ReleaseResources()
+	void DFA::ReleaseResources() const
 	{
 		std::vector<DFAnode*> nodes = GetAllNodes();
 		for (DFAnode* p : nodes) {
@@ -275,7 +275,18 @@ namespace RE
 
 	///----------------------------------------------------------------------------------------------------
 
-	std::pair<const Character, const Regexp::TokenStream::TokenType> Regexp::TokenStream::GetToken()
+	Regexp::TokenStream& Regexp::TokenStream::operator=(TokenStream&& other)
+	{
+		if (this == &other) {
+			return *this;
+		}
+		s = other.s;
+		pos = other.pos;
+		alphabet = other.alphabet;
+		return *this;
+	}
+
+	std::pair<Character, Regexp::TokenStream::TokenType> Regexp::TokenStream::GetToken()
 	{
 		if (pos >= s.size()) {
 			return { 0, TokenType::EOS };
@@ -345,7 +356,7 @@ namespace RE
 	}
 
 	std::pair<std::vector<DFAnode*>, std::vector<DFAnode*>> Regexp::Split(const std::vector<DFAnode*>& set,
-		const std::unordered_map<const DFAnode*, Number> numbers) const
+		const std::unordered_map<const DFAnode*, Number>& numbers) const
 	{
 		std::vector<DFAnode*> first;
 		std::vector<DFAnode*> second;
@@ -401,7 +412,7 @@ namespace RE
 	}
 
 	DFA Regexp::CreateMinimalDFA(const SetPartition& sp,
-		const std::unordered_map<const DFAnode*, Number> numbers) const
+		const std::unordered_map<const DFAnode*, Number>& numbers) const
 	{
 		DFAnode::hint = nullptr;
 		std::vector<DFAnode*> nodes;
@@ -505,6 +516,7 @@ namespace RE
 				nodes[i]->trans.push_back(Transition{ alphabet[j], nodes[index] });
 			}
 		}
+		nfa = NFA{ 0 };
 		dfa.first = nodes[0];
 		dfa.sz = table.size();
 		return nodes;
@@ -723,17 +735,25 @@ namespace RE
 	}
 
 	Regexp::Regexp(const REstring& string)
-		: ts{ string }
+		: source{ string }, ts{ source }, nfa{ 0 }
 	{
-		PutRE(string);
+		if (string.size() == 0) {
+			throw Error::InvalidRegex{ "Empty regular expression " };
+		}
+		MakeDFA();
 	}
 
-	void Regexp::PutRE(const REstring& string)
+	void RE::Regexp::PutRE(const REstring& string)
 	{
-		if (string.size() > 0) {
-			source = string;
-			MakeDFA();
+		if (string.size() == 0) {
+			throw Error::InvalidRegex{ "Empty regular expression " };
 		}
+		source = string;
+		ts = TokenStream{ source };
+		alphabet = std::vector<Character>{};
+		nfa = NFA{ 0 };
+		dfa = DFA{};
+		MakeDFA();
 	}
 
 	std::istream& operator>>(std::istream& is, REstring& string)

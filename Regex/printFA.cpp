@@ -26,7 +26,7 @@ namespace RE
 			numbers.emplace(nodes[i], i + 1);
 		}
 		if (nodes.size() != numbers.size()) {
-			throw Error::RuntimeError{ "PrintNFA: nodes.size() != numbers.size()" };
+			throw Error::RuntimeError{ "PrintNFA(): nodes.size() != numbers.size()" };
 		}
 		size_t nDigits{ 0 };									// number of digits
 		size_t n{ nodes.size() };
@@ -130,7 +130,7 @@ namespace RE
 			numbers.emplace(nodes[i], i + 1);
 		}
 		if (nodes.size() != numbers.size()) {
-			throw Error::RuntimeError{ "PrintDFA: nodes.size() != numbers.size()" };
+			throw Error::RuntimeError{ "PrintDFA(): nodes.size() != numbers.size()" };
 		}
 		size_t nDigits{ 0 };									// number of digits
 		size_t n{ nodes.size() };

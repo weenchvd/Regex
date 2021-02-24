@@ -11,4 +11,10 @@
 ## Closure				$$ *
 						$$ +
 						$$ ?
+						$$ { Count }
+						$$ EMPTYSTRING
+## Count				$$ INTEGER CountMore
+## CountMore			$$ , Max
+						$$ EMPTYSTRING
+## Max					$$ INTEGER
 						$$ EMPTYSTRING

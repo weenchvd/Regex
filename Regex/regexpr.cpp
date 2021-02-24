@@ -9,6 +9,7 @@
 #include<queue>
 #include<algorithm>
 #include<memory>
+#include<cctype>
 #include"printFA.hpp"
 #include"../Error/error.hpp"
 #include"regexpr.hpp"
@@ -112,6 +113,37 @@ namespace RE
 		return p;
 	}
 
+	NFA NFA::CreateCopy() const
+	{
+		const std::vector<NFAnode*> nodes = GetAllNodes();
+		std::unordered_map<const NFAnode*, const Index> indexes;
+		std::vector<NFAnode*> nodeCopies;
+		NFA nfaCopy{};
+		for (Index i = 0; i < nodes.size(); ++i) {
+			const NFAnode* p = nodes[i];
+			indexes.emplace(p, i);
+			nodeCopies.push_back(CreateNFANode(p->ty, p->ch));
+			if (p->ty == NFAnode::Type::ACCEPT) {
+				nfaCopy.last = nodeCopies[i];
+			}
+		}
+		if (nodes.size() != indexes.size()) {
+			throw Error::RuntimeError{ "CreateCopy(): nodes.size() != indexes.size()" };
+		}
+		for (Index i = 0; i < nodes.size(); ++i) {
+			const NFAnode* p = nodes[i];
+			if (p->succ1 != nullptr) {
+				nodeCopies[i]->succ1 = nodeCopies[indexes.find(p->succ1)->second];
+			}
+			if (p->succ2 != nullptr) {
+				nodeCopies[i]->succ2 = nodeCopies[indexes.find(p->succ2)->second];
+			}
+		}
+		nfaCopy.first = nodeCopies[0];
+		nfaCopy.sz = nodeCopies.size();
+		return nfaCopy;
+	}
+
 	NFA::NFA(const Character character)
 		: sz{ 2 }
 	{
@@ -193,6 +225,100 @@ namespace RE
 		first = newFirst;
 		last = newLast;
 		sz += 2;
+	}
+
+	// the function creates a positive (1 or more times) closure for NFA
+	void NFA::ClosurePositive()
+	{
+		NFAnode* newFirst = CreateNFANode(NFAnode::Type::EPSILON);
+		NFAnode* newLast = CreateNFANode(NFAnode::Type::ACCEPT);
+		newFirst->succ1 = first;
+		last->succ1 = first;
+		last->succ2 = newLast;
+		last->ty = NFAnode::Type::EPSILON;
+		first = newFirst;
+		last = newLast;
+		sz += 2;
+	}
+
+	// the function creates a "binary" (0 or 1 time) closure for NFA
+	void NFA::ClosureBinary()
+	{
+		NFAnode* newFirst = CreateNFANode(NFAnode::Type::EPSILON);
+		newFirst->succ1 = first;
+		newFirst->succ2 = last;
+		first = newFirst;
+		sz += 1;
+	}
+
+	// the function creates a custom ({INT}, {INT,}, {MIN,MAX}) closure for NFA
+	// for {INT} INT >= 1; for {INT,} INT >= 0; for {MIN,MAX} MIN >= 0, MIN < MAX
+	void NFA::ClosureCustom(const int min, const int max, const Constants::ClosureType ty)
+	{
+		switch (ty) {
+		case Constants::ClosureType::FINITE: {
+			if (min < 1) {
+				throw Error::InvalidRegex{ "For {INT}, INT must be greater than or equal to 1" };
+			}
+			std::vector<NFA> copies;
+			for (int i = 1; i < min; ++i) {
+				copies.push_back(CreateCopy());
+			}
+			for (NFA& nfa : copies) {
+				this->Concatenate(nfa);
+			}
+			break;
+		}
+		case Constants::ClosureType::INFITITE: {
+			if (min < 0) {
+				throw Error::InvalidRegex{ "For {INT,}, INT must be greater than or equal to 0" };
+			}
+			else if (min == 0) {
+				this->ClosureKleene();
+			}
+			else if (min == 1) {
+				this->ClosurePositive();
+			}
+			else {
+				std::vector<NFA> copies;
+				for (int i = 1; i < min; ++i) {
+					copies.push_back(CreateCopy());
+				}
+				copies[copies.size() - 1].ClosurePositive();
+				for (NFA& nfa : copies) {
+					this->Concatenate(nfa);
+				}
+			}
+			break;
+		}
+		case Constants::ClosureType::RANGE: {
+			if (min < 0 || min >= max) {
+				throw Error::InvalidRegex{ "For {MIN,MAX}, MIN must be greater than or equal to 0, "
+										   "MIN must be less than MAX" };
+			}
+			std::vector<NFA> copies;
+			for (int i = 1; i < max; ++i) {
+				copies.push_back(CreateCopy());
+			}
+			if (min == 0) {
+				this->ClosureBinary();
+				for (size_t i = 0; i < copies.size(); ++i) {
+					copies[i].ClosureBinary();
+				}
+			}
+			else {
+				for (size_t i = min - 1; i < copies.size(); ++i) {
+					copies[i].ClosureBinary();
+				}
+			}
+			for (NFA& nfa : copies) {
+				this->Concatenate(nfa);
+			}
+			break;
+		}
+		default:
+			throw Error::RuntimeError{ "ClosureCustom(): Unknown ClosureType" };
+		}
 	}
 
 	///----------------------------------------------------------------------------------------------------
@@ -295,10 +421,12 @@ namespace RE
 		switch (ch) {
 		case '(':
 		case ')':
-		case '|':
 		case '*':
 		case '+':
 		case '?':
+		case '{':
+		case '|':
+		case '}':
 			return { ch, TokenType::SPECIAL };
 		default:
 			alphabet.emplace(ch);
@@ -356,7 +484,7 @@ namespace RE
 	}
 
 	std::pair<std::vector<DFAnode*>, std::vector<DFAnode*>> Regexp::Split(const std::vector<DFAnode*>& set,
-		const std::unordered_map<const DFAnode*, Number>& numbers) const
+		const std::unordered_map<const DFAnode*, Index>& indexes) const
 	{
 		std::vector<DFAnode*> first;
 		std::vector<DFAnode*> second;
@@ -368,7 +496,7 @@ namespace RE
 			}
 			first.clear();
 			const bool target = TransitionExists(trans[0]);
-			for (size_t i = 0; i < set.size(); ++i) {
+			for (Index i = 0; i < set.size(); ++i) {
 				if (target == TransitionExists(trans[i])) {
 					first.push_back(set[i]);
 				}
@@ -383,9 +511,9 @@ namespace RE
 				continue;
 			}
 			first.clear();
-			const Number targetNum = numbers.find(trans[0])->second;
-			for (size_t i = 0; i < set.size(); ++i) {
-				if (targetNum == numbers.find(trans[i])->second) {
+			const Index targetNum = indexes.find(trans[0])->second;
+			for (Index i = 0; i < set.size(); ++i) {
+				if (targetNum == indexes.find(trans[i])->second) {
 					first.push_back(set[i]);
 				}
 				else {
@@ -411,8 +539,16 @@ namespace RE
 		}
 	}
 
+	void Regexp::AssignNumber(const std::vector<DFAnode*>& set, const Index num,
+		std::unordered_map<const DFAnode*, Index>& indexes) const
+	{
+		for (const DFAnode* p : set) {
+			indexes[p] = num;
+		}
+	}
+
 	DFA Regexp::CreateMinimalDFA(const SetPartition& sp,
-		const std::unordered_map<const DFAnode*, Number>& numbers) const
+		const std::unordered_map<const DFAnode*, Index>& indexes) const
 	{
 		DFAnode::hint = nullptr;
 		std::vector<DFAnode*> nodes;
@@ -420,15 +556,24 @@ namespace RE
 		for (const std::vector<DFAnode*>& set : sp) {
 			nodes.push_back(dfa.CreateDFANode(set[0]->acc));
 		}
-		for (size_t i = 0; i < sp.size(); ++i) {
+		for (Index i = 0; i < sp.size(); ++i) {
 			for (const Transition& t : sp[i][0]->trans) {
-				nodes[i]->trans.push_back(Transition{ t.first, nodes[numbers.find(t.second)->second] });
+				nodes[i]->trans.push_back(Transition{ t.first, nodes[indexes.find(t.second)->second] });
 			}
 		}
 		DFA newDFA;
-		newDFA.first = nodes[numbers.find(dfa.first)->second];
+		newDFA.first = nodes[indexes.find(dfa.first)->second];
 		newDFA.sz = nodes.size();
 		return newDFA;
+	}
+
+	void RE::Regexp::CheckNFA() const
+	{
+		std::set<const NFAnode*> set;
+		AddNodesReachableViaEpsilonTransition(set, nfa.GetFirstNode());
+		if (set.find(nfa.GetLastNode()) != set.end()) {
+			ThrowInvalidRegex("This regular expression is invalid. It matches any string");
+		}
 	}
 
 #if PRINTFA
@@ -457,6 +602,7 @@ namespace RE
 	void Regexp::REtoNFA()
 	{
 		nfa = PGoal();
+		CheckNFA();
 		auto p = ts.GetAlphabet();
 		alphabet.insert(alphabet.end(), p.first, p.second);
 		std::sort(alphabet.begin(), alphabet.end());
@@ -528,10 +674,10 @@ namespace RE
 	void Regexp::MinimizeDFA(const std::vector<DFAnode*> nodes)
 	{
 		constexpr size_t qty = 2;								// initial quantity of SP
-		constexpr Number numA = 0;								// number of the std::vector<DFAnode*> with accepting states
-		constexpr Number numNA = 1;								// number of the std::vector<DFAnode*> with nonaccepting states
-		Number num{ numNA };									// number of the last std::vector<DFAnode*>
-		std::unordered_map<const DFAnode*, Number> numbers;		// numbers of std::vector<DFAnode*>
+		constexpr Index indexA = 0;								// index of the std::vector<DFAnode*> with accepting states
+		constexpr Index indexNA = 1;							// index of the std::vector<DFAnode*> with nonaccepting states
+		Index index{ indexNA };									// index of the last std::vector<DFAnode*>
+		std::unordered_map<const DFAnode*, Index> indexes;		// indexes of std::vector<DFAnode*>
 		SetPartition sp;										// set partition
 		SetPartition temp;										// set partition
 		sp.reserve(nodes.size());
@@ -539,35 +685,34 @@ namespace RE
 		temp.resize(qty);
 		for (DFAnode* ptr : nodes) {
 			if (ptr->acc == true) {
-				numbers.emplace(ptr, numA);
-				temp[numA].push_back(ptr);
+				indexes.emplace(ptr, indexA);
+				temp[indexA].push_back(ptr);
 			}
 			else {
-				numbers.emplace(ptr, numNA);
-				temp[numNA].push_back(ptr);
+				indexes.emplace(ptr, indexNA);
+				temp[indexNA].push_back(ptr);
 			}
 		}
 		while (sp.size() != temp.size()) {
 			sp = temp;
 			temp.clear();
-			for (const std::vector<DFAnode*>& set : sp) {
+			temp.resize(sp.size());
+			for (Index i = 0; i < sp.size(); ++i) {
+				const std::vector<DFAnode*>& set = sp[i];
 				if (set.size() == 1) {
-					temp.push_back(set);
+					temp[i] = set;
 					continue;
 				}
-				std::pair<std::vector<DFAnode*>, std::vector<DFAnode*>> pair = Split(set, numbers);
-				temp.push_back(pair.first);
+				std::pair<std::vector<DFAnode*>, std::vector<DFAnode*>> pair = Split(set, indexes);
+				temp[i] = pair.first;
 				if (pair.second.size() != 0) {
+					AssignNumber(pair.second, ++index, indexes);
 					temp.push_back(pair.second);
-					++num;
-					for (DFAnode* ptr : pair.second) {
-						numbers[ptr] = num;
-					}
 				}
 			}
 		}
 		if (nodes.size() != sp.size()) {
-			dfa = CreateMinimalDFA(sp, numbers);
+			dfa = CreateMinimalDFA(sp, indexes);
 		}
 	}
 
@@ -701,14 +846,32 @@ namespace RE
 				a.ClosureKleene();
 				token = ts.AdvanceAndGetToken();
 				return;
-			//case '+':
-			//	
-			//	token = ts.AdvanceAndGetToken();
-			//	return;
-			//case '?':
-			//	
-			//	token = ts.AdvanceAndGetToken();
-			//	return;
+			case '+':
+				a.ClosurePositive();
+				token = ts.AdvanceAndGetToken();
+				return;
+			case '?':
+				a.ClosureBinary();
+				token = ts.AdvanceAndGetToken();
+				return;
+			case '{': {
+				token = ts.AdvanceAndGetToken();
+				int min{ -1 };
+				int max{ -1 };
+				Constants::ClosureType type{ Constants::ClosureType::NOTYPE };
+				PCount(min, max, type);
+				if (token.first != '}') {
+					break;
+				}
+				try {
+					a.ClosureCustom(min, max, type);
+				}
+				catch (const Error::InvalidRegex& e) {
+					ThrowInvalidRegex(e.what());
+				}
+				token = ts.AdvanceAndGetToken();
+				return;
+			}
 			case '(':
 			case ')':
 			case '|':
@@ -725,6 +888,98 @@ namespace RE
 		ThrowInvalidRegex(ts.GetPosition());
 	}
 
+	// parse Count
+	void Regexp::PCount(int& min, int& max, Constants::ClosureType& ty)
+	{
+		switch (token.second) {
+		case Regexp::TokenStream::TokenType::EOS:
+			break;
+		case Regexp::TokenStream::TokenType::SPECIAL:
+			break;
+		case Regexp::TokenStream::TokenType::LITERAL: {
+			if (isdigit(token.first)) {
+				min = PGetInteger();
+				ty = Constants::ClosureType::FINITE;
+				PCountMore(max, ty);
+				return;
+			}
+			break;
+		}
+		default:
+			break;
+		}
+		ThrowInvalidRegex(ts.GetPosition());
+	}
+
+	// parse CountMore
+	void Regexp::PCountMore(int& max, Constants::ClosureType& ty)
+	{
+		switch (token.second) {
+		case Regexp::TokenStream::TokenType::EOS:
+			return;
+		case Regexp::TokenStream::TokenType::SPECIAL:
+			switch (token.first) {
+			case '}':
+				return;
+			default:
+				break;
+			}
+			break;
+		case Regexp::TokenStream::TokenType::LITERAL:
+			switch (token.first) {
+			case ',':
+				ty = Constants::ClosureType::INFITITE;
+				token = ts.AdvanceAndGetToken();
+				PMax(max, ty);
+				return;
+			default:
+				break;
+			}
+			break;
+		default:
+			break;
+		}
+		ThrowInvalidRegex(ts.GetPosition());
+	}
+
+	// parse Max
+	void Regexp::PMax(int& max, Constants::ClosureType& ty)
+	{
+		switch (token.second) {
+		case Regexp::TokenStream::TokenType::EOS:
+			return;
+		case Regexp::TokenStream::TokenType::SPECIAL:
+			switch (token.first) {
+			case '}':
+				return;
+			default:
+				break;
+			}
+			break;
+		case Regexp::TokenStream::TokenType::LITERAL:
+			if (isdigit(token.first)) {
+				max = PGetInteger();
+				ty = Constants::ClosureType::RANGE;
+				return;
+			}
+			break;
+		default:
+			break;
+		}
+		ThrowInvalidRegex(ts.GetPosition());
+	}
+
+	// parse INTEGER
+	int Regexp::PGetInteger()
+	{
+		std::string s;
+		while (isdigit(token.first)) {
+			s += token.first;
+			token = ts.AdvanceAndGetToken();
+		}
+		return atoi(s.c_str());
+	}
+
 	void Regexp::ThrowInvalidRegex(const size_t position) const
 	{
 		std::string message{ "Invalid character '" };
@@ -732,6 +987,14 @@ namespace RE
 		message += std::string{ source, 0, position } + "'. Regular expression: ";
 		message += source;
 		throw Error::InvalidRegex{ message };
+	}
+
+	void Regexp::ThrowInvalidRegex(const std::string& message) const
+	{
+		std::string fullMessage{ message };
+		fullMessage += ". Regular expression: ";
+		fullMessage += source;
+		throw Error::InvalidRegex{ fullMessage };
 	}
 
 	Regexp::Regexp(const REstring& string)

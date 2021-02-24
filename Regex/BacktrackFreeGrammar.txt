@@ -13,6 +13,12 @@
 ## Closure                  $$ *
                             $$ +
                             $$ ?
+                            $$ { Count }
+                            $$ EMPTYSTRING
+## Count                    $$ INTEGER CountMore
+## CountMore                $$ , Max
+                            $$ EMPTYSTRING
+## Max                      $$ INTEGER
                             $$ EMPTYSTRING
 
 
@@ -24,13 +30,20 @@ FIRST(|): |
 FIRST(Concatenation): ( LITERAL
 FIRST(Symbol): ( LITERAL
 FIRST(Block): ( LITERAL
-FIRST(Closure): * + ? EMPTYSTRING
+FIRST(Closure): * + ? { EMPTYSTRING
 FIRST((): (
 FIRST()): )
 FIRST(LITERAL): LITERAL
 FIRST(*): *
 FIRST(+): +
 FIRST(?): ?
+FIRST({): {
+FIRST(Count): INTEGER
+FIRST(}): }
+FIRST(INTEGER): INTEGER
+FIRST(CountMore): , EMPTYSTRING
+FIRST(,): ,
+FIRST(Max): INTEGER EMPTYSTRING
 FIRST(Alternation'): | EMPTYSTRING
 FIRST(Concatenation'): EMPTYSTRING ( LITERAL
 
@@ -39,8 +52,11 @@ FOLLOW(Goal): EOF
 FOLLOW(Alternation): ) EOF
 FOLLOW(Concatenation): | ) EOF
 FOLLOW(Symbol): | ( LITERAL ) EOF
-FOLLOW(Block): | ( LITERAL * + ? ) EOF
+FOLLOW(Block): | ( LITERAL * + ? { ) EOF
 FOLLOW(Closure): | ( LITERAL ) EOF
+FOLLOW(Count): } EOF
+FOLLOW(CountMore): } EOF
+FOLLOW(Max): } EOF
 FOLLOW(Alternation'): ) EOF
 FOLLOW(Concatenation'): | ) EOF
 
@@ -58,4 +74,10 @@ FIRST+(Block -> LITERAL): LITERAL
 FIRST+(Closure -> *): *
 FIRST+(Closure -> +): +
 FIRST+(Closure -> ?): ?
+FIRST+(Closure -> { Count }): {
 FIRST+(Closure -> EMPTYSTRING): EMPTYSTRING | ( LITERAL ) EOF
+FIRST+(Count -> INTEGER CountMore): INTEGER
+FIRST+(CountMore -> , Max): ,
+FIRST+(CountMore -> EMPTYSTRING): EMPTYSTRING } EOF
+FIRST+(Max -> INTEGER): INTEGER
+FIRST+(Max -> EMPTYSTRING): EMPTYSTRING } EOF

@@ -14,11 +14,14 @@ Special pattern characters are characters (or sequences of characters) that have
 ### * Quantifiers
 Quantifiers follow a character or a special pattern character. They can modify the amount of times that character is repeated in the match:
 
-| characters    | times         | effects |
-| ------------- | ------------- | ------- |
-| `*`           | 0 or more     | The preceding atom is matched 0 or more times |
-| `+`           | 1 or more     | The preceding atom is matched 1 or more times |
-| `?`           | 0 or 1        | The preceding atom is optional (matched either 0 times or once) |
+| characters    | times               | effects |
+| ------------- | ------------------- | ------- |
+| `*`           | 0 or more           | The preceding atom is matched 0 or more times |
+| `+`           | 1 or more           | The preceding atom is matched 1 or more times |
+| `?`           | 0 or 1              | The preceding atom is optional (matched either 0 times or once) |
+| `{`INT`}`     | INT                 | The preceding atom is matched exactly INT times |
+| `{`INT,`}`    | INT or more         | The preceding atom is matched INT or more times |
+| `{`MIN,MAX`}` | between MIN and MAX | The preceding atom is matched at least MIN times, but not more than MAX |
 
 By default, all these quantifiers are greedy (i.e., they take as many characters that meet the condition as possible).
 

@@ -9,7 +9,19 @@
 
 namespace RE
 {
+	namespace Constants
+	{
+		enum class ClosureType : unsigned char {
+			NOTYPE,
+			FINITE,
+			INFITITE,
+			RANGE
+		};
+	}
+
 	using Character = unsigned int;
+	using Index = size_t;
+	using Number = size_t;
 
 	class Regexp;
 
@@ -38,12 +50,16 @@ namespace RE
 		size_t sz;							// size
 		static std::allocator<NFAnode> alloc;
 	private:
+		NFA()
+			: first{ nullptr }, last{ nullptr }, sz{ 0 } {}
+
 		// const members
 		std::vector<NFAnode*> GetAllNodes() const;
 		void AddNodeToSet(std::vector<NFAnode*>& set, NFAnode* node) const;
 		void ReleaseResources() const;
 		NFAnode* CreateNFANode(const NFAnode::Type type) const;
 		NFAnode* CreateNFANode(const NFAnode::Type type, const Character character) const;
+		NFA CreateCopy() const;
 
 		// friends
 #if PRINTFA
@@ -67,6 +83,9 @@ namespace RE
 		void Concatenate(NFA& other);
 		void Alternate(NFA& other);
 		void ClosureKleene();
+		void ClosurePositive();
+		void ClosureBinary();
+		void ClosureCustom(const int min, const int max, const Constants::ClosureType ty);
 	};
 
 	///----------------------------------------------------------------------------------------------------
@@ -133,8 +152,8 @@ namespace RE
 
 	using SubsetTable = std::vector<SubsetTableEntry>;
 
-	using REstring = std::string;
-	using Number = size_t;
+	class REstring : public std::string {};
+
 	using SetPartition = std::vector<std::vector<DFAnode*>>;
 
 	class Regexp {
@@ -146,11 +165,11 @@ namespace RE
 				LITERAL						// character, letter, symbol
 			};
 		private:
-			REstring& s;
+			std::string& s;
 			size_t pos;
 			std::set<Character> alphabet;
 		public:
-			TokenStream(REstring& string)
+			TokenStream(std::string& string)
 				: s{ string }, pos{ 0 } {}
 
 			TokenStream(const TokenStream& other) = delete;
@@ -172,7 +191,7 @@ namespace RE
 			void EraseAlphabet() { alphabet.clear(); }
 		};
 	private:
-		REstring source;
+		std::string source;
 		TokenStream ts;
 		std::pair<Character, TokenStream::TokenType> token;
 		std::vector<Character> alphabet;
@@ -185,11 +204,14 @@ namespace RE
 		void AddNodesReachableViaEpsilonTransition(std::set<const NFAnode*>& set, const NFAnode* node) const;
 		bool Equal(const std::set<const NFAnode*>& a, const std::set<const NFAnode*>& b) const;
 		std::pair<std::vector<DFAnode*>, std::vector<DFAnode*>> Split(const std::vector<DFAnode*>& set,
-			const std::unordered_map<const DFAnode*, Number>& numbers) const;
+			const std::unordered_map<const DFAnode*, Index>& indexes) const;
 		const DFAnode* FindTransition(const DFAnode* node, const Character ch) const;
 		bool TransitionExists(const DFAnode* node) const { return (node == nullptr) ? false : true; }
+		void AssignNumber(const std::vector<DFAnode*>& set, const Index index,
+			std::unordered_map<const DFAnode*, Index>& indexes) const;
 		DFA CreateMinimalDFA(const SetPartition& sp,
-			const std::unordered_map<const DFAnode*, Number>& numbers) const;
+			const std::unordered_map<const DFAnode*, Index>& indexes) const;
+		void CheckNFA() const;
 
 		// nonconst members
 		void MakeDFA();
@@ -206,7 +228,12 @@ namespace RE
 		 NFA PSymbol();
 		 NFA PBlock();
 		void PClosure(NFA& a);
+		void PCount(int& min, int& max, Constants::ClosureType& ty);
+		void PCountMore(int& max, Constants::ClosureType& ty);
+		void PMax(int& max, Constants::ClosureType& ty);
+		 int PGetInteger();
 		void ThrowInvalidRegex(const size_t position) const;
+		void ThrowInvalidRegex(const std::string& message) const;
 	public:
 		Regexp(const REstring& string);
 

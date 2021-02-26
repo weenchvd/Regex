@@ -408,28 +408,27 @@ namespace RE
 		}
 		s = other.s;
 		pos = other.pos;
-		alphabet = other.alphabet;
 		return *this;
 	}
 
 	std::pair<Character, Regexp::TokenStream::TokenType> Regexp::TokenStream::GetToken()
 	{
 		if (pos >= s.size()) {
-			return { 0, TokenType::EOS };
+			return { notCharacter, TokenType::EOS };
 		}
 		const Character ch = s[pos];
 		switch (ch) {
-		case '(':
-		case ')':
-		case '*':
-		case '+':
-		case '?':
-		case '{':
-		case '|':
-		case '}':
+		case SPEC_LPAR:
+		case SPEC_RPAR:
+		case SPEC_STAR:
+		case SPEC_PLUS:
+		case SPEC_QUESTION:
+		case SPEC_BSLASH:
+		case SPEC_LBRACE:
+		case SPEC_BAR:
+		case SPEC_RBRACE:
 			return { ch, TokenType::SPECIAL };
 		default:
-			alphabet.emplace(ch);
 			return { ch, TokenType::LITERAL };
 		}
 	}
@@ -438,7 +437,7 @@ namespace RE
 	{
 		std::set<const NFAnode*> newSet;
 		for (const NFAnode* p : set) {
-			if (p->ch == ch) {
+			if (p->ty == NFAnode::Type::LITERAL && p->ch == ch) {
 				newSet.emplace(p->succ1);
 			}
 		}
@@ -603,10 +602,9 @@ namespace RE
 	{
 		nfa = PGoal();
 		CheckNFA();
-		auto p = ts.GetAlphabet();
-		alphabet.insert(alphabet.end(), p.first, p.second);
+		alphabet.insert(alphabet.end(), alphabetTemp.begin(), alphabetTemp.end());
 		std::sort(alphabet.begin(), alphabet.end());
-		ts.EraseAlphabet();
+		alphabetTemp.clear();
 	}
 
 	// Subset Construction
@@ -662,7 +660,7 @@ namespace RE
 				nodes[i]->trans.push_back(Transition{ alphabet[j], nodes[index] });
 			}
 		}
-		nfa = NFA{ 0 };
+		nfa = NFA{ notCharacter };
 		dfa.first = nodes[0];
 		dfa.sz = table.size();
 		return nodes;
@@ -739,10 +737,10 @@ namespace RE
 			return;
 		case Regexp::TokenStream::TokenType::SPECIAL:
 			switch (token.first) {
-			case ')':
+			case SPEC_RPAR:
 				return;
-			case '|':
-				token = ts.AdvanceAndGetToken();
+			case SPEC_BAR:
+				token = ts.GetNextToken();
 				a.Alternate(PConcatenation());
 				PAlternationPrime(a);
 				return;
@@ -773,13 +771,13 @@ namespace RE
 			return;
 		case Regexp::TokenStream::TokenType::SPECIAL:
 			switch (token.first) {
-			case '(': {
+			case SPEC_LPAR:
+			case SPEC_BSLASH:
 				a.Concatenate(PSymbol());
 				PConcatenationPrime(a);
 				return;
-			}
-			case ')':
-			case '|':
+			case SPEC_RPAR:
+			case SPEC_BAR:
 				return;
 			default:
 				break;
@@ -810,28 +808,86 @@ namespace RE
 			break;
 		case Regexp::TokenStream::TokenType::SPECIAL:
 			switch (token.first) {
-			case '(': {
-				token = ts.AdvanceAndGetToken();
+			case SPEC_LPAR: {
+				token = ts.GetNextToken();
 				NFA a = PAlternation();
-				if (token.first == ')') {
-					token = ts.AdvanceAndGetToken();
+				if (token.first == SPEC_RPAR) {
+					token = ts.GetNextToken();
 					return a;
 				}
 				break;
 			}
+			case SPEC_BSLASH:
+				token = ts.GetNextToken();
+				return PEscape();
 			default:
 				break;
 			}
 			break;
 		case Regexp::TokenStream::TokenType::LITERAL: {
 			Character ch = token.first;
-			token = ts.AdvanceAndGetToken();
+			token = ts.GetNextToken();
+			alphabetTemp.emplace(ch);
 			return NFA{ ch };
 		}
 		default:
 			break;
 		}
 		ThrowInvalidRegex(ts.GetPosition());
+	}
+
+	// parse Escape
+	NFA RE::Regexp::PEscape()
+	{
+		switch (token.second) {
+		case Regexp::TokenStream::TokenType::EOS:
+			break;
+		case Regexp::TokenStream::TokenType::SPECIAL: {
+			Character ch = token.first;
+			token = ts.GetNextToken();
+			alphabetTemp.emplace(ch);
+			return NFA{ ch };
+		}
+		case Regexp::TokenStream::TokenType::LITERAL: {
+			Character ch{ notCharacter };
+			if (!PIsEscape(ch)) {
+				ch = token.first;
+			}
+			token = ts.GetNextToken();
+			alphabetTemp.emplace(ch);
+			return NFA{ ch };
+		}
+		default:
+			break;
+		}
+		ThrowInvalidRegex(ts.GetPosition());
+	}
+
+	// parse ESCAPE
+	bool RE::Regexp::PIsEscape(Character& ch)
+	{
+		switch (token.first) {
+		case ESC_NULL:
+			ch = CTRL_NULL;
+			return true;
+		case ESC_HTAB:
+			ch = CTRL_HTAB;
+			return true;
+		case ESC_NEWLINE:
+			ch = CTRL_NEWLINE;
+			return true;
+		case ESC_VTAB:
+			ch = CTRL_VTAB;
+			return true;
+		case ESC_FORMFEED:
+			ch = CTRL_FORMFEED;
+			return true;
+		case ESC_CRETURN:
+			ch = CTRL_CRETURN;
+			return true;
+		default:
+			return false;
+		}
 	}
 
 	// parse Closure
@@ -842,25 +898,25 @@ namespace RE
 			return;
 		case Regexp::TokenStream::TokenType::SPECIAL:
 			switch (token.first) {
-			case '*':
+			case SPEC_STAR:
 				a.ClosureKleene();
-				token = ts.AdvanceAndGetToken();
+				token = ts.GetNextToken();
 				return;
-			case '+':
+			case SPEC_PLUS:
 				a.ClosurePositive();
-				token = ts.AdvanceAndGetToken();
+				token = ts.GetNextToken();
 				return;
-			case '?':
+			case SPEC_QUESTION:
 				a.ClosureBinary();
-				token = ts.AdvanceAndGetToken();
+				token = ts.GetNextToken();
 				return;
-			case '{': {
-				token = ts.AdvanceAndGetToken();
+			case SPEC_LBRACE: {
+				token = ts.GetNextToken();
 				int min{ -1 };
 				int max{ -1 };
 				Constants::ClosureType type{ Constants::ClosureType::NOTYPE };
 				PCount(min, max, type);
-				if (token.first != '}') {
+				if (token.first != SPEC_RBRACE) {
 					break;
 				}
 				try {
@@ -869,12 +925,13 @@ namespace RE
 				catch (const Error::InvalidRegex& e) {
 					ThrowInvalidRegex(e.what());
 				}
-				token = ts.AdvanceAndGetToken();
+				token = ts.GetNextToken();
 				return;
 			}
-			case '(':
-			case ')':
-			case '|':
+			case SPEC_LPAR:
+			case SPEC_RPAR:
+			case SPEC_BSLASH:
+			case SPEC_BAR:
 				return;
 			default:
 				break;
@@ -896,7 +953,7 @@ namespace RE
 			break;
 		case Regexp::TokenStream::TokenType::SPECIAL:
 			break;
-		case Regexp::TokenStream::TokenType::LITERAL: {
+		case Regexp::TokenStream::TokenType::LITERAL:
 			if (isdigit(token.first)) {
 				min = PGetInteger();
 				ty = Constants::ClosureType::FINITE;
@@ -904,7 +961,6 @@ namespace RE
 				return;
 			}
 			break;
-		}
 		default:
 			break;
 		}
@@ -919,7 +975,7 @@ namespace RE
 			return;
 		case Regexp::TokenStream::TokenType::SPECIAL:
 			switch (token.first) {
-			case '}':
+			case SPEC_RBRACE:
 				return;
 			default:
 				break;
@@ -927,9 +983,9 @@ namespace RE
 			break;
 		case Regexp::TokenStream::TokenType::LITERAL:
 			switch (token.first) {
-			case ',':
+			case LIT_COMMA:
 				ty = Constants::ClosureType::INFITITE;
-				token = ts.AdvanceAndGetToken();
+				token = ts.GetNextToken();
 				PMax(max, ty);
 				return;
 			default:
@@ -950,7 +1006,7 @@ namespace RE
 			return;
 		case Regexp::TokenStream::TokenType::SPECIAL:
 			switch (token.first) {
-			case '}':
+			case SPEC_RBRACE:
 				return;
 			default:
 				break;
@@ -975,7 +1031,7 @@ namespace RE
 		std::string s;
 		while (isdigit(token.first)) {
 			s += token.first;
-			token = ts.AdvanceAndGetToken();
+			token = ts.GetNextToken();
 		}
 		return atoi(s.c_str());
 	}
@@ -1013,8 +1069,9 @@ namespace RE
 		}
 		source = string;
 		ts = TokenStream{ source };
+		alphabetTemp = std::set<Character>{};
 		alphabet = std::vector<Character>{};
-		nfa = NFA{ 0 };
+		nfa = NFA{ notCharacter };
 		dfa = DFA{};
 		MakeDFA();
 	}

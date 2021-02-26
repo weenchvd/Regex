@@ -9,6 +9,10 @@
                             $$ EMPTYSTRING
 ## Symbol                   $$ Block Closure
 ## Block                    $$ ( Alternation )
+                            $$ \ Escape
+                            $$ LITERAL
+## Escape                   $$ ESCAPE
+                            $$ SPECIAL
                             $$ LITERAL
 ## Closure                  $$ *
                             $$ +
@@ -24,16 +28,20 @@
 
 FIRST(EMPTYSTRING): EMPTYSTRING
 FIRST(EOF): EOF
-FIRST(Goal): ( LITERAL
-FIRST(Alternation): ( LITERAL
+FIRST(Goal): ( \ LITERAL
+FIRST(Alternation): ( \ LITERAL
 FIRST(|): |
-FIRST(Concatenation): ( LITERAL
-FIRST(Symbol): ( LITERAL
-FIRST(Block): ( LITERAL
+FIRST(Concatenation): ( \ LITERAL
+FIRST(Symbol): ( \ LITERAL
+FIRST(Block): ( \ LITERAL
 FIRST(Closure): * + ? { EMPTYSTRING
 FIRST((): (
 FIRST()): )
+FIRST(\): \
+FIRST(Escape): ESCAPE SPECIAL LITERAL
 FIRST(LITERAL): LITERAL
+FIRST(ESCAPE): ESCAPE
+FIRST(SPECIAL): SPECIAL
 FIRST(*): *
 FIRST(+): +
 FIRST(?): ?
@@ -45,15 +53,16 @@ FIRST(CountMore): , EMPTYSTRING
 FIRST(,): ,
 FIRST(Max): INTEGER EMPTYSTRING
 FIRST(Alternation'): | EMPTYSTRING
-FIRST(Concatenation'): EMPTYSTRING ( LITERAL
+FIRST(Concatenation'): EMPTYSTRING ( \ LITERAL
 
 
 FOLLOW(Goal): EOF
 FOLLOW(Alternation): ) EOF
 FOLLOW(Concatenation): | ) EOF
-FOLLOW(Symbol): | ( LITERAL ) EOF
-FOLLOW(Block): | ( LITERAL * + ? { ) EOF
-FOLLOW(Closure): | ( LITERAL ) EOF
+FOLLOW(Symbol): | ( \ LITERAL ) EOF
+FOLLOW(Block): | ( \ LITERAL * + ? { ) EOF
+FOLLOW(Closure): | ( \ LITERAL ) EOF
+FOLLOW(Escape): | ( \ LITERAL * + ? { ) EOF
 FOLLOW(Count): } EOF
 FOLLOW(CountMore): } EOF
 FOLLOW(Max): } EOF
@@ -61,21 +70,25 @@ FOLLOW(Alternation'): ) EOF
 FOLLOW(Concatenation'): | ) EOF
 
 
-FIRST+(Goal -> Alternation): ( LITERAL
-FIRST+(Alternation -> Concatenation Alternation'): ( LITERAL
+FIRST+(Goal -> Alternation): ( \ LITERAL
+FIRST+(Alternation -> Concatenation Alternation'): ( \ LITERAL
 FIRST+(Alternation' -> | Concatenation Alternation'): |
 FIRST+(Alternation' -> EMPTYSTRING): EMPTYSTRING ) EOF
-FIRST+(Concatenation -> Symbol Concatenation'): ( LITERAL
-FIRST+(Concatenation' -> Symbol Concatenation'): ( LITERAL
+FIRST+(Concatenation -> Symbol Concatenation'): ( \ LITERAL
+FIRST+(Concatenation' -> Symbol Concatenation'): ( \ LITERAL
 FIRST+(Concatenation' -> EMPTYSTRING): EMPTYSTRING | ) EOF
-FIRST+(Symbol -> Block Closure): ( LITERAL
+FIRST+(Symbol -> Block Closure): ( \ LITERAL
 FIRST+(Block -> ( Alternation )): (
+FIRST+(Block -> \ Escape): \
 FIRST+(Block -> LITERAL): LITERAL
+FIRST+(Escape -> ESCAPE): ESCAPE
+FIRST+(Escape -> SPECIAL): SPECIAL
+FIRST+(Escape -> LITERAL): LITERAL
 FIRST+(Closure -> *): *
 FIRST+(Closure -> +): +
 FIRST+(Closure -> ?): ?
 FIRST+(Closure -> { Count }): {
-FIRST+(Closure -> EMPTYSTRING): EMPTYSTRING | ( LITERAL ) EOF
+FIRST+(Closure -> EMPTYSTRING): EMPTYSTRING | ( \ LITERAL ) EOF
 FIRST+(Count -> INTEGER CountMore): INTEGER
 FIRST+(CountMore -> , Max): ,
 FIRST+(CountMore -> EMPTYSTRING): EMPTYSTRING } EOF

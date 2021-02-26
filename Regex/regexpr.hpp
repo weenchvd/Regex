@@ -9,6 +9,41 @@
 
 namespace RE
 {
+	enum ControlCharacter : unsigned char {
+		CTRL_NULL		= '\0',
+		CTRL_HTAB		= '\t',
+		CTRL_NEWLINE	= '\n',
+		CTRL_VTAB		= '\v',
+		CTRL_FORMFEED	= '\f',
+		CTRL_CRETURN	= '\r'
+	};
+	
+	enum EscapeCharacter : unsigned char {
+		ESC_NULL		= '0',
+		ESC_HTAB		= 't',
+		ESC_NEWLINE		= 'n',
+		ESC_VTAB		= 'v',
+		ESC_FORMFEED	= 'f',
+		ESC_CRETURN		= 'r'
+	};
+
+	// SpecialCharacters must not match EscapeCharacters
+	enum SpecialCharacter : unsigned char {
+		SPEC_LPAR		= '(',
+		SPEC_RPAR		= ')',
+		SPEC_STAR		= '*',
+		SPEC_PLUS		= '+',
+		SPEC_QUESTION	= '?',
+		SPEC_BSLASH		= '\\',
+		SPEC_LBRACE		= '{',
+		SPEC_BAR		= '|',
+		SPEC_RBRACE		= '}'
+	};
+
+	enum LiteralCharacter : unsigned char {
+		LIT_COMMA		= ','
+	};
+
 	namespace Constants
 	{
 		enum class ClosureType : unsigned char {
@@ -19,9 +54,11 @@ namespace RE
 		};
 	}
 
-	using Character = unsigned int;
+	using Character = int;
 	using Index = size_t;
 	using Number = size_t;
+
+	constexpr Character notCharacter = -1;
 
 	class Regexp;
 
@@ -29,6 +66,7 @@ namespace RE
 	public:
 		enum class Type : unsigned char {
 			LITERAL,						// character, letter, symbol
+			//NEGATION,						// any other than this
 			ACCEPT,							// Accept state
 			EPSILON							// Epsilon transition
 		};
@@ -40,7 +78,7 @@ namespace RE
 		bool mark;
 		static NFAnode* hint;
 	public:
-		NFAnode(Type type, Character character = 0)
+		NFAnode(Type type, Character character = notCharacter)
 			: succ1{ nullptr }, succ2{ nullptr }, ch{ character }, ty{ type }, mark{ false } {}
 	};
 
@@ -167,7 +205,6 @@ namespace RE
 		private:
 			std::string& s;
 			size_t pos;
-			std::set<Character> alphabet;
 		public:
 			TokenStream(std::string& string)
 				: s{ string }, pos{ 0 } {}
@@ -179,21 +216,17 @@ namespace RE
 
 			// const members
 			size_t GetPosition() const { return pos; }
-			std::pair<std::set<Character>::iterator, std::set<Character>::iterator> GetAlphabet() const
-			{
-				return { alphabet.begin(), alphabet.end() };
-			}
 
 			// nonconst members
-			std::pair<Character, TokenType> GetToken();
 			void Advance() { ++pos; }
-			std::pair<Character, TokenType> AdvanceAndGetToken() { Advance(); return GetToken(); }
-			void EraseAlphabet() { alphabet.clear(); }
+			std::pair<Character, TokenType> GetToken();
+			std::pair<Character, TokenType> GetNextToken() { Advance(); return GetToken(); }
 		};
 	private:
 		std::string source;
 		TokenStream ts;
 		std::pair<Character, TokenStream::TokenType> token;
+		std::set<Character> alphabetTemp;
 		std::vector<Character> alphabet;
 		NFA nfa;
 		DFA dfa;
@@ -227,6 +260,8 @@ namespace RE
 		void PConcatenationPrime(NFA& a);
 		 NFA PSymbol();
 		 NFA PBlock();
+		 NFA PEscape();
+		bool PIsEscape(Character& ch);
 		void PClosure(NFA& a);
 		void PCount(int& min, int& max, Constants::ClosureType& ty);
 		void PCountMore(int& max, Constants::ClosureType& ty);

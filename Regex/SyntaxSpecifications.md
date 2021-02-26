@@ -10,6 +10,15 @@ Regular expression operations look sequentially for matches between the characte
 ### * Special pattern characters
 Special pattern characters are characters (or sequences of characters) that have a special meaning when they appear in a regular expression pattern, either to represent a character that is difficult to express in a string, or to represent a category of characters. Each of these special pattern characters is matched in the target sequence against a single character (unless a quantifier specifies otherwise).
 
+| characters    | description             | matches |
+| ------------- | ----------------------- | ------- |
+| `\t`          | tab (HT)                | a horizontal tab character |
+| `\n`          | newline (LF)            | a newline (line feed) character |
+| `\v`          | vertical tab (VT)       | a vertical tab character |
+| `\f`          | form feed (FF)          | a form feed character |
+| `\r`          | carriage return (CR)    | a carriage return character |
+| `\0`          | null                    | a null character |
+| `\`character  | character               | the character character as it is, without interpreting its special meaning within a regex expression. Any character can be escaped except those which form any of the special character sequences above. Needed for: `\` `*` `+` `?` `(` `)` `{` `}` `|` |
 
 ### * Quantifiers
 Quantifiers follow a character or a special pattern character. They can modify the amount of times that character is repeated in the match:
@@ -26,11 +35,11 @@ Quantifiers follow a character or a special pattern character. They can modify t
 By default, all these quantifiers are greedy (i.e., they take as many characters that meet the condition as possible).
 
 ### * Groups
-Groups allow to apply quantifiers to a sequence of characters (instead of a single character). There are two kinds of groups:
+Groups allow to apply quantifiers to a sequence of characters (instead of a single character):
 
-| characters        | times         | effects |
+| characters        | description   | effects |
 | ----------------- | ------------- | ------- |
-| `(`subpattern`)`  | Separator     | Separates two alternative patterns or subpatterns |
+| `(`subpattern`)`  | Group         | Allow to apply quantifiers to a sequence of characters |
 
 
 ### * Alternatives

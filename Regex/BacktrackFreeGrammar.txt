@@ -4,12 +4,13 @@
 ## Alternation              $$ Concatenation Alternation'
 ## Alternation'             $$ | Concatenation Alternation'
                             $$ EMPTYSTRING
-## Concatenation            $$ Symbol Concatenation'
-## Concatenation'           $$ Symbol Concatenation'
+## Concatenation            $$ Term Concatenation'
+## Concatenation'           $$ Term Concatenation'
                             $$ EMPTYSTRING
-## Symbol                   $$ Block Closure
+## Term                     $$ Block Closure
 ## Block                    $$ ( Alternation )
-                            $$ \ Escape
+                            $$ Atom
+## Atom                     $$ \ Escape
                             $$ LITERAL
 ## Escape                   $$ ESCAPE
                             $$ SPECIAL
@@ -32,11 +33,12 @@ FIRST(Goal): ( \ LITERAL
 FIRST(Alternation): ( \ LITERAL
 FIRST(|): |
 FIRST(Concatenation): ( \ LITERAL
-FIRST(Symbol): ( \ LITERAL
+FIRST(Term): ( \ LITERAL
 FIRST(Block): ( \ LITERAL
 FIRST(Closure): * + ? { EMPTYSTRING
 FIRST((): (
 FIRST()): )
+FIRST(Atom): \ LITERAL
 FIRST(\): \
 FIRST(Escape): ESCAPE SPECIAL LITERAL
 FIRST(LITERAL): LITERAL
@@ -59,9 +61,10 @@ FIRST(Concatenation'): EMPTYSTRING ( \ LITERAL
 FOLLOW(Goal): EOF
 FOLLOW(Alternation): ) EOF
 FOLLOW(Concatenation): | ) EOF
-FOLLOW(Symbol): | ( \ LITERAL ) EOF
+FOLLOW(Term): | ( \ LITERAL ) EOF
 FOLLOW(Block): | ( \ LITERAL * + ? { ) EOF
 FOLLOW(Closure): | ( \ LITERAL ) EOF
+FOLLOW(Atom): | ( \ LITERAL * + ? { ) EOF
 FOLLOW(Escape): | ( \ LITERAL * + ? { ) EOF
 FOLLOW(Count): } EOF
 FOLLOW(CountMore): } EOF
@@ -74,13 +77,14 @@ FIRST+(Goal -> Alternation): ( \ LITERAL
 FIRST+(Alternation -> Concatenation Alternation'): ( \ LITERAL
 FIRST+(Alternation' -> | Concatenation Alternation'): |
 FIRST+(Alternation' -> EMPTYSTRING): EMPTYSTRING ) EOF
-FIRST+(Concatenation -> Symbol Concatenation'): ( \ LITERAL
-FIRST+(Concatenation' -> Symbol Concatenation'): ( \ LITERAL
+FIRST+(Concatenation -> Term Concatenation'): ( \ LITERAL
+FIRST+(Concatenation' -> Term Concatenation'): ( \ LITERAL
 FIRST+(Concatenation' -> EMPTYSTRING): EMPTYSTRING | ) EOF
-FIRST+(Symbol -> Block Closure): ( \ LITERAL
+FIRST+(Term -> Block Closure): ( \ LITERAL
 FIRST+(Block -> ( Alternation )): (
-FIRST+(Block -> \ Escape): \
-FIRST+(Block -> LITERAL): LITERAL
+FIRST+(Block -> Atom): \ LITERAL
+FIRST+(Atom -> \ Escape): \
+FIRST+(Atom -> LITERAL): LITERAL
 FIRST+(Escape -> ESCAPE): ESCAPE
 FIRST+(Escape -> SPECIAL): SPECIAL
 FIRST+(Escape -> LITERAL): LITERAL

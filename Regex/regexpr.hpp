@@ -34,14 +34,17 @@ namespace RE
 		SPEC_STAR		= '*',
 		SPEC_PLUS		= '+',
 		SPEC_QUESTION	= '?',
+		SPEC_LBRACKET	= '[',
 		SPEC_BSLASH		= '\\',
+		SPEC_RBRACKET	= ']',
 		SPEC_LBRACE		= '{',
 		SPEC_BAR		= '|',
 		SPEC_RBRACE		= '}'
 	};
 
 	enum LiteralCharacter : unsigned char {
-		LIT_COMMA		= ','
+		LIT_COMMA		= ',',
+		LIT_CARET		= '^'
 	};
 
 	namespace Constants
@@ -52,6 +55,8 @@ namespace RE
 			INFITITE,
 			RANGE
 		};
+
+		const std::string eof{ "EOF" };
 	}
 
 	using Character = int;
@@ -258,8 +263,9 @@ namespace RE
 		void PAlternationPrime(NFA& a);
 		 NFA PConcatenation();
 		void PConcatenationPrime(NFA& a);
-		 NFA PSymbol();
+		 NFA PTerm();
 		 NFA PBlock();
+		 NFA PAtom();
 		 NFA PEscape();
 		bool PIsEscape(Character& ch);
 		void PClosure(NFA& a);

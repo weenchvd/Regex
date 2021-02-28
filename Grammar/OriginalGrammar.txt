@@ -3,11 +3,12 @@
 ## Goal					$$ Alternation
 ## Alternation			$$ Alternation | Concatenation
 						$$ Concatenation
-## Concatenation		$$ Concatenation Symbol
-						$$ Symbol
-## Symbol				$$ Block Closure
+## Concatenation		$$ Concatenation Term
+						$$ Term
+## Term					$$ Block Closure
 ## Block				$$ ( Alternation )
-						$$ \ Escape
+						$$ Atom
+## Atom					$$ \ Escape
 						$$ LITERAL
 ## Escape				$$ ESCAPE
 						$$ SPECIAL

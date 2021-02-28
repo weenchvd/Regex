@@ -601,6 +601,9 @@ namespace RE
 	void Regexp::REtoNFA()
 	{
 		nfa = PGoal();
+		if (token.second != Regexp::TokenStream::TokenType::EOS) {
+			ThrowInvalidRegex(ts.GetPosition());
+		}
 		CheckNFA();
 		alphabet.insert(alphabet.end(), alphabetTemp.begin(), alphabetTemp.end());
 		std::sort(alphabet.begin(), alphabet.end());
@@ -758,7 +761,7 @@ namespace RE
 	// parse Concatenation
 	NFA Regexp::PConcatenation()
 	{
-		NFA a = PSymbol();
+		NFA a = PTerm();
 		PConcatenationPrime(a);
 		return a;
 	}
@@ -773,7 +776,7 @@ namespace RE
 			switch (token.first) {
 			case SPEC_LPAR:
 			case SPEC_BSLASH:
-				a.Concatenate(PSymbol());
+				a.Concatenate(PTerm());
 				PConcatenationPrime(a);
 				return;
 			case SPEC_RPAR:
@@ -783,7 +786,7 @@ namespace RE
 				break;
 			}
 		case Regexp::TokenStream::TokenType::LITERAL:
-			a.Concatenate(PSymbol());
+			a.Concatenate(PTerm());
 			PConcatenationPrime(a);
 			return;
 		default:
@@ -792,8 +795,8 @@ namespace RE
 		ThrowInvalidRegex(ts.GetPosition());
 	}
 
-	// parse Symbol
-	NFA Regexp::PSymbol()
+	// parse Term
+	NFA Regexp::PTerm()
 	{
 		NFA a = PBlock();
 		PClosure(a);
@@ -804,8 +807,6 @@ namespace RE
 	NFA Regexp::PBlock()
 	{
 		switch (token.second) {
-		case Regexp::TokenStream::TokenType::EOS:
-			break;
 		case Regexp::TokenStream::TokenType::SPECIAL:
 			switch (token.first) {
 			case SPEC_LPAR: {
@@ -817,6 +818,24 @@ namespace RE
 				}
 				break;
 			}
+			default:
+				return PAtom();
+			}
+			break;
+		default:
+			return PAtom();;
+		}
+		ThrowInvalidRegex(ts.GetPosition());
+	}
+
+	// parse Atom
+	NFA RE::Regexp::PAtom()
+	{
+		switch (token.second) {
+		case Regexp::TokenStream::TokenType::EOS:
+			break;
+		case Regexp::TokenStream::TokenType::SPECIAL:
+			switch (token.first) {
 			case SPEC_BSLASH:
 				token = ts.GetNextToken();
 				return PEscape();
@@ -1039,7 +1058,13 @@ namespace RE
 	void Regexp::ThrowInvalidRegex(const size_t position) const
 	{
 		std::string message{ "Invalid character '" };
-		message += std::string{ source, position, 1 } + "' was encountered after substring '";
+		if (position < source.size()) {
+			message += std::string{ source, position, 1 };
+		}
+		else {
+			message += Constants::eof;
+		}
+		message += "' was encountered after substring '";
 		message += std::string{ source, 0, position } + "'. Regular expression: ";
 		message += source;
 		throw Error::InvalidRegex{ message };

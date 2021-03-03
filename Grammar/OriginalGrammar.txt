@@ -7,6 +7,13 @@
 						$$ Term
 ## Term					$$ Block Closure
 ## Block				$$ ( Alternation )
+						$$ [ CharacterClass ]
+						$$ Atom
+## CharacterClass		$$ Negation CharacterClassRange
+## Negation				$$ ^
+						$$ EMPTYSTRING
+## CharacterClassRange	$$ CharacterClassRange - Atom
+						$$ CharacterClassRange Atom
 						$$ Atom
 ## Atom					$$ \ Escape
 						$$ LITERAL

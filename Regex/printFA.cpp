@@ -14,26 +14,6 @@
 
 namespace RE
 {
-	std::string GetSymbol(const char ch)
-	{
-		switch (ch) {
-		case CTRL_NULL:
-			return std::string{ R"(\0)" };
-		case CTRL_HTAB:
-			return std::string{ R"(\t)" };
-		case CTRL_NEWLINE:
-			return std::string{ R"(\n)" };
-		case CTRL_VTAB:
-			return std::string{ R"(\v)" };
-		case CTRL_FORMFEED:
-			return std::string{ R"(\f)" };
-		case CTRL_CRETURN:
-			return std::string{ R"(\r)" };
-		default:
-			return std::string{ ch };
-		}
-	}
-
 	void PrintNFA(std::ostream& os, const RE::Regexp& re)
 	{
 		if (re.nfa.sz == 0) {
@@ -63,7 +43,7 @@ namespace RE
 		const std::string to{ "->" };							// transition mark
 		const std::string ns{ "#" };							// number sign
 		const std::string eps{ "Eps" };							// Epsilon mark
-		const size_t nLetters{ eps.size() };					// number of letters
+		const size_t nLetters{ 5 };								// number of letters
 		const size_t cw1{ sp.size() + ((accept.size() > start.size()) ? accept.size() : start.size()) + sp.size() }; // column width 1
 		const size_t cw2{ sizeof(NFAnode*) * 2 }; // column width 2
 		const size_t cw3{ sp.size() + ns.size() + nDigits + sp.size() }; // column width 3
@@ -98,7 +78,7 @@ namespace RE
 					<< sp << ns << std::setw(cw3 - sp.size() - ns.size()) << it->second << sep
 					<< std::setw(cw4 + sep.size() + cw5) << sp << sep << std::endl;
 				std::ostringstream oss;
-				oss << sp << std::setw(nLetters) << GetSymbol(p->ch) << sp
+				oss << sp << std::setw(nLetters) << GetGlyph(p->ch, Constants::GlyphType::ASOUTPUT) << sp
 					<< to << sp << ns << numbers.find(p->succ1)->second;
 				os << sep << std::setw(cw1 + sep.size() + cw2 + sep.size() + cw3) << sp
 					<< sep << std::setw(cw4) << std::left << oss.str()
@@ -166,7 +146,7 @@ namespace RE
 		const std::string start{ "START" };
 		const std::string to{ "->" };							// transition mark
 		const std::string ns{ "#" };							// number sign
-		const size_t nLetters{ 3 };								// number of letters
+		const size_t nLetters{ 5 };								// number of letters
 		const size_t cw1{ sp.size() + ((accept.size() > start.size()) ? accept.size() : start.size()) + sp.size() }; // column width 1
 		const size_t cw2{ sizeof(DFAnode*) * 2 }; // column width 2
 		const size_t cw3{ sp.size() + ns.size() + nDigits + sp.size() }; // column width 3
@@ -200,7 +180,7 @@ namespace RE
 				<< std::setw(cw4 + sep.size() + cw5) << sp << sep << std::endl;
 			for (const Transition& t : p->trans) {
 				std::ostringstream oss;
-				oss << sp << std::setw(nLetters) << GetSymbol(t.first) << sp
+				oss << sp << std::setw(nLetters) << GetGlyph(t.first, Constants::GlyphType::ASOUTPUT) << sp
 					<< to << sp << ns << numbers.find(t.second)->second;
 				os << sep << std::setw(cw1 + sep.size() + cw2 + sep.size() + cw3) << sp
 					<< sep << std::setw(cw4) << std::left << oss.str()

@@ -11,6 +11,7 @@ namespace RE
 {
 	enum ControlCharacter : unsigned char {
 		CTRL_NULL		= '\0',
+		CTRL_BACKSPACE	= '\b',
 		CTRL_HTAB		= '\t',
 		CTRL_NEWLINE	= '\n',
 		CTRL_VTAB		= '\v',
@@ -20,11 +21,12 @@ namespace RE
 	
 	enum EscapeCharacter : unsigned char {
 		ESC_NULL		= '0',
+		ESC_B			= 'b',
 		ESC_HTAB		= 't',
 		ESC_NEWLINE		= 'n',
 		ESC_VTAB		= 'v',
 		ESC_FORMFEED	= 'f',
-		ESC_CRETURN		= 'r'
+		ESC_CRETURN		= 'r',
 	};
 
 	// SpecialCharacters must not match EscapeCharacters
@@ -44,8 +46,23 @@ namespace RE
 
 	enum LiteralCharacter : unsigned char {
 		LIT_COMMA		= ',',
+		LIT_HYPHEN		= '-',
 		LIT_CARET		= '^'
 	};
+
+	using Character = unsigned int;
+	using Index = size_t;
+	using Number = size_t;
+	using CharacterFlag = Character;
+
+	enum CharacterFlags : CharacterFlag {
+		CHARFL_NOTCHAR	= 0x80000000,		// Character bit #32: 0 == Character, 1 == not Character
+		CHARFL_NEGATED	= 0x40000000,		// Character bit #31: 0 == LITERAL, 1 == NEGATED LITERAL (any other than this)
+		CHARFL_NOFLAGS	= 0x00000000,		// NO FLAGS
+		CHARFL_ALLFLAGS	= CHARFL_NOTCHAR | CHARFL_NEGATED | CHARFL_NOFLAGS
+	};
+
+#define ERASEALLCHARACTERFLAGS(ch) ch & ~CHARFL_ALLFLAGS
 
 	namespace Constants
 	{
@@ -56,14 +73,29 @@ namespace RE
 			RANGE
 		};
 
-		const std::string eof{ "EOF" };
+		enum class GlyphType : unsigned char {
+			ASINPUT,
+			ASOUTPUT
+		};
+
+		enum class AtomType : unsigned char {
+			STANDART,
+			CHARCLASS
+		};
 	}
 
-	using Character = int;
-	using Index = size_t;
-	using Number = size_t;
+	enum ASCIIControlCharacter : unsigned char {
+		ASCIICC_FIRST	= 0x00,
+		ASCIICC_LAST	= 0x1F,
+		ASCIICC_DEL		= 0x7F
+	};
 
-	constexpr Character notCharacter = -1;
+	namespace Strings
+	{
+		extern const char* eof;
+		extern const char* del;
+		extern const char* asciiCC[ASCIICC_LAST + 1];
+	}
 
 	class Regexp;
 
@@ -71,7 +103,6 @@ namespace RE
 	public:
 		enum class Type : unsigned char {
 			LITERAL,						// character, letter, symbol
-			//NEGATION,						// any other than this
 			ACCEPT,							// Accept state
 			EPSILON							// Epsilon transition
 		};
@@ -83,7 +114,7 @@ namespace RE
 		bool mark;
 		static NFAnode* hint;
 	public:
-		NFAnode(Type type, Character character = notCharacter)
+		NFAnode(Type type, Character character = CHARFL_NOTCHAR)
 			: succ1{ nullptr }, succ2{ nullptr }, ch{ character }, ty{ type }, mark{ false } {}
 	};
 
@@ -208,10 +239,10 @@ namespace RE
 				LITERAL						// character, letter, symbol
 			};
 		private:
-			std::string& s;
+			REstring& s;
 			size_t pos;
 		public:
-			TokenStream(std::string& string)
+			TokenStream(REstring& string)
 				: s{ string }, pos{ 0 } {}
 
 			TokenStream(const TokenStream& other) = delete;
@@ -221,37 +252,63 @@ namespace RE
 
 			// const members
 			size_t GetPosition() const { return pos; }
+			TokenType GetTokenType(const Character ch) const;
+			//std::pair<Character, TokenType> GetPreviousToken() const;
+			std::pair<Character, TokenType> GetToken() const;
 
 			// nonconst members
 			void Advance() { ++pos; }
-			std::pair<Character, TokenType> GetToken();
-			std::pair<Character, TokenType> GetNextToken() { Advance(); return GetToken(); }
 		};
 	private:
-		std::string source;
+		REstring source;
 		TokenStream ts;
 		std::pair<Character, TokenStream::TokenType> token;
 		std::set<Character> alphabetTemp;
 		std::vector<Character> alphabet;
 		NFA nfa;
 		DFA dfa;
+		Character last;
 	private:
 		// const members
-		std::set<const NFAnode*> Delta(const std::set<const NFAnode*>& set, const Character ch) const;
-		std::set<const NFAnode*> EpsilonClosure(const std::set<const NFAnode*>& set) const;
-		void AddNodesReachableViaEpsilonTransition(std::set<const NFAnode*>& set, const NFAnode* node) const;
-		bool Equal(const std::set<const NFAnode*>& a, const std::set<const NFAnode*>& b) const;
-		std::pair<std::vector<DFAnode*>, std::vector<DFAnode*>> Split(const std::vector<DFAnode*>& set,
+		std::set<const NFAnode*> Delta(
+			const std::set<const NFAnode*>& set,
+			const Character ch) const;
+
+		std::set<const NFAnode*> EpsilonClosure(
+			const std::set<const NFAnode*>& set) const;
+
+		void AddNodesReachableViaEpsilonTransition(
+			std::set<const NFAnode*>& set,
+			const NFAnode* node) const;
+
+		bool Equal(
+			const std::set<const NFAnode*>& a,
+			const std::set<const NFAnode*>& b) const;
+
+		std::pair<std::vector<DFAnode*>, std::vector<DFAnode*>> Split(
+			const std::vector<DFAnode*>& set,
 			const std::unordered_map<const DFAnode*, Index>& indexes) const;
-		const DFAnode* FindTransition(const DFAnode* node, const Character ch) const;
+
+		const DFAnode* FindTransition(
+			const DFAnode* node,
+			const Character ch) const;
+
 		bool TransitionExists(const DFAnode* node) const { return (node == nullptr) ? false : true; }
-		void AssignNumber(const std::vector<DFAnode*>& set, const Index index,
+
+		void AssignNumber(
+			const std::vector<DFAnode*>& set,
+			const Index index,
 			std::unordered_map<const DFAnode*, Index>& indexes) const;
-		DFA CreateMinimalDFA(const SetPartition& sp,
+
+		DFA CreateMinimalDFA(
+			const SetPartition& sp,
 			const std::unordered_map<const DFAnode*, Index>& indexes) const;
+
 		void CheckNFA() const;
 
 		// nonconst members
+		void NextToken() { ts.Advance(); token = ts.GetToken(); }
+		void AddToAlphabet(const Character ch) { alphabetTemp.emplace(ch); }
 		void MakeDFA();
 		void REtoNFA();
 		std::vector<DFAnode*> NFAtoDFA();
@@ -265,9 +322,16 @@ namespace RE
 		void PConcatenationPrime(NFA& a);
 		 NFA PTerm();
 		 NFA PBlock();
-		 NFA PAtom();
-		 NFA PEscape();
-		bool PIsEscape(Character& ch);
+		 NFA PCharacterClass();
+		bool PNegation();
+		 NFA PCharacterClassRange(const CharacterFlag flags, const Constants::AtomType type);
+		void PCharacterClassRangePrime(const CharacterFlag flags, const Constants::AtomType type, NFA& a);
+		void CheckRange(Character firstC, Character lastC);
+		 NFA PAtom(
+				const CharacterFlag flags = CHARFL_NOFLAGS,
+				const Constants::AtomType type = Constants::AtomType::STANDART);
+		 NFA PEscape(const CharacterFlag flags, const Constants::AtomType type);
+		bool PIsEscape(Character& ch, const Constants::AtomType type);
 		void PClosure(NFA& a);
 		void PCount(int& min, int& max, Constants::ClosureType& ty);
 		void PCountMore(int& max, Constants::ClosureType& ty);
@@ -294,6 +358,7 @@ namespace RE
 	};
 
 	std::istream& operator>>(std::istream& is, REstring& string);
+	std::string GetGlyph(const Character ch, const Constants::GlyphType type);
 }
 
 #endif // REGEXPR_HPP

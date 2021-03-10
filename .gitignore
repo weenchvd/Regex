@@ -1,4 +1,8 @@
-/.out
-/.vs
-Build
-Backup
+/.out/
+/.vs/
+/Build/
+/Backup/
+/External/
+/Install/
+/trash/
+notes.sqlite

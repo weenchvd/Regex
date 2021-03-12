@@ -5,12 +5,12 @@
 #include<vector>
 #include<set>
 #include<unordered_map>
-#include"printFA.hpp"
+#include"regexpr_config.hpp"
 #include"../Error/error.hpp"
 #include"regexpr.hpp"
 
 
-#if PRINTFA
+#if REGEX_PRINT_FA_STATE
 
 namespace RE
 {
@@ -191,4 +191,4 @@ namespace RE
 	}
 }
 
-#endif // PRINTFA
+#endif // REGEX_PRINT_FA_STATE

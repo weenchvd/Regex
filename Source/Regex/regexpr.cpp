@@ -10,7 +10,7 @@
 #include<algorithm>
 #include<memory>
 #include<cctype>
-#include"printFA.hpp"
+#include"regexpr_config.hpp"
 #include"../Error/error.hpp"
 #include"regexpr.hpp"
 
@@ -55,51 +55,8 @@ namespace RE
 			"US"		// Unit Separator
 		};
 	}
-}
 
-int main()
-{
-	try
-	{
-		const std::string regexList{ "Regexes.txt" };
-		//const std::string regexList{ R"(D:\_Code\Project_A\Build\Regexes.txt)" };
-		std::ifstream ifs{ regexList };
-		if (!ifs) {
-			Error::ErrPrint(std::cerr, Error::Level::ERROR, Error::Type::INFILE, regexList);
-			return 1;
-		}
-		const std::string output{ "DFA.txt" };
-		//const std::string output{ R"(D:\_Code\Project_A\Build\DFA.txt)" };
-		std::ofstream ofs{ output };
-		if (!ofs) {
-			Error::ErrPrint(std::cerr, Error::Level::ERROR, Error::Type::OUTFILE, output);
-			return 1;
-		}
-		RE::REstring rs;
-		ifs >> rs;
-		//if (ifs || !ifs && !ifs.eof()) {
-		//	Error::ErrPrint(std::cerr, Error::Level::ERROR, "File data read error");
-		//	return 1;
-		//}
-		RE::Regexp regex{ rs };
 
-		std::cout << std::endl << "Success!" << std::endl;
-		return 0;
-	}
-	catch (const Error::RuntimeError& e)
-	{
-		Error::ErrPrint(std::cerr, Error::Level::EXCEPTION, Error::Type::RUNTIME, e.what());
-		return -1;
-	}
-	catch (const std::exception& e)
-	{
-		Error::ErrPrint(std::cerr, Error::Level::EXCEPTION, Error::Type::STD, e.what());
-		return -2;
-	}
-}
-
-namespace RE
-{
 	NFAnode* NFAnode::hint = nullptr;
 	std::allocator<NFAnode> NFA::alloc;
 
@@ -634,7 +591,7 @@ namespace RE
 		}
 	}
 
-#if PRINTFA
+#if REGEX_PRINT_FA_STATE
 	void Regexp::MakeDFA()
 	{
 		std::cout << std::endl << "RE: " << this->source << std::endl;
@@ -653,7 +610,7 @@ namespace RE
 		REtoNFA();
 		MinimizeDFA(NFAtoDFA());
 	}
-#endif // PRINTFA
+#endif // REGEX_PRINT_FA_STATE
 
 	// Thompson’s Construction
 	// CHAPTER 2 Scanners, 2.4 FROM REGULAR EXPRESSION TO SCANNER, 2.4.2 Regular Expression to NFA: Thompson’s Construction

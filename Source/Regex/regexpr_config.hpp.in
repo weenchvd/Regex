@@ -1,0 +1,6 @@
+#ifndef REGEXPR_CONFIG_HPP
+#define REGEXPR_CONFIG_HPP
+
+#cmakedefine01 REGEX_PRINT_FA_STATE
+
+#endif // REGEXPR_CONFIG_HPP

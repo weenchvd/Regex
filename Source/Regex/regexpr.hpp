@@ -136,9 +136,9 @@ namespace RE
 		NFA CreateCopy() const;
 
 		// friends
-#if PRINTFA
+#if REGEX_PRINT_FA_STATE
 		friend void PrintNFA(std::ostream& os, const RE::Regexp& re);
-#endif // PRINTFA
+#endif // REGEX_PRINT_FA_STATE
 	public:
 		NFA(const Character character);
 		~NFA();
@@ -197,9 +197,9 @@ namespace RE
 
 		// friends
 		friend class Regexp;
-#if PRINTFA
+#if REGEX_PRINT_FA_STATE
 		friend void PrintDFA(std::ostream& os, const RE::Regexp& re);
-#endif // PRINTFA
+#endif // REGEX_PRINT_FA_STATE
 	public:
 		DFA()
 			: first{ nullptr }, sz{ 0 } {}
@@ -226,7 +226,7 @@ namespace RE
 
 	using SubsetTable = std::vector<SubsetTableEntry>;
 
-	class REstring : public std::string {};
+	using REstring = std::string;
 
 	using SetPartition = std::vector<std::vector<DFAnode*>>;
 
@@ -351,10 +351,10 @@ namespace RE
 		void PutRE(const REstring& string);
 
 		// friends
-#if PRINTFA
+#if REGEX_PRINT_FA_STATE
 		friend void PrintNFA(std::ostream& os, const RE::Regexp& re);
 		friend void PrintDFA(std::ostream& os, const RE::Regexp& re);
-#endif // PRINTFA
+#endif // REGEX_PRINT_FA_STATE
 	};
 
 	std::istream& operator>>(std::istream& is, REstring& string);

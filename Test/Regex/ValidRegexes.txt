@@ -1,0 +1,57 @@
+a
+abcdef
+(a)
+(abcdef)
+a(bcde)f
+a|b
+a|b|c|d
+a|(bcde)|f
+a|(bc|de)|f
+a+
+ab*
+ab?
+ab?c?d?
+a?b?c?d
+a?bc?d?
+a*b*c
+ab*c*
+abc+
+(abc)+
+(ab)c+
+(ab)+c
+(ab+)c
+(ab+)
+(a+b)
+a(b|c)?(de)+f*
+ab{0,2}
+ab(0,2)
+a\nb
+a\v
+a\f
+a\0
+a \0b
+a\{b
+a\{\}
+a\(b\)
+a\+*
+a\+\*
+a\?\b
+a\\+
+(a\+0)+
+a\|b
+a\b
+a[bc]
+[bc]
+[bc]+
+a[b-e]
+a[b-j]z
+a^b
+a^+
+a[-{]
+a[^bc]
+a[^b-j]z
+a[^0-9A-F]z
+a[^b-j \0]z
+a[^ \0\t]\0
+a[^\0- ]
+a[^\bab]

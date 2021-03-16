@@ -11,7 +11,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(EXEC_NAME "regexpr_test")
 set(SOURCE_CXX_LIST "${EXEC_NAME}.cpp"
 					"${CMAKE_SOURCE_DIR}/Source/Regex/regexpr.cpp"
-					"${CMAKE_SOURCE_DIR}/Source/Regex/printFA.cpp"
 					"${CMAKE_SOURCE_DIR}/Source/Error/error.cpp"
 					)
 

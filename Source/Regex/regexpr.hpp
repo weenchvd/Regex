@@ -62,7 +62,7 @@ namespace RE
 		CHARFL_ALLFLAGS	= CHARFL_NOTCHAR | CHARFL_NEGATED | CHARFL_NOFLAGS
 	};
 
-#define ERASEALLCHARACTERFLAGS(ch) ch & ~CHARFL_ALLFLAGS
+#define ERASE_ALL_CHARACTER_FLAGS(ch) ch & ~CHARFL_ALLFLAGS
 
 	namespace Constants
 	{
@@ -71,11 +71,6 @@ namespace RE
 			FINITE,
 			INFITITE,
 			RANGE
-		};
-
-		enum class GlyphType : unsigned char {
-			ASINPUT,
-			ASOUTPUT
 		};
 
 		enum class AtomType : unsigned char {
@@ -229,6 +224,7 @@ namespace RE
 	using REstring = std::string;
 
 	using SetPartition = std::vector<std::vector<DFAnode*>>;
+	constexpr size_t ringBufferSize = 4;
 
 	class Regexp {
 		class TokenStream {
@@ -240,24 +236,36 @@ namespace RE
 			};
 		private:
 			REstring& s;
-			size_t pos;
+			size_t pos;						// index
+			std::vector<REstring> tss;		// array of token substrings (ring buffer)
+			size_t tpos;					// index of the array of token substrings
 		public:
 			TokenStream(REstring& string)
-				: s{ string }, pos{ 0 } {}
+				: s{ string }, pos{ 0 }, tpos{ 0 } { tss.resize(ringBufferSize); }
 
 			TokenStream(const TokenStream& other) = delete;
-			TokenStream& operator=(const TokenStream&& other) = delete;
-			TokenStream(TokenStream& other) = delete;
+			TokenStream& operator=(const TokenStream& other) = delete;
+			TokenStream(TokenStream&& other) = delete;
 			TokenStream& operator=(TokenStream&& other);
 
 			// const members
 			size_t GetPosition() const { return pos; }
+			REstring GetSubstring(const size_t qty) const;
 			TokenType GetTokenType(const Character ch) const;
-			//std::pair<Character, TokenType> GetPreviousToken() const;
 			std::pair<Character, TokenType> GetToken() const;
 
 			// nonconst members
-			void Advance() { ++pos; }
+			void Advance(const bool beginSubstring)
+			{
+				++pos;
+				if (beginSubstring) {
+					tpos = (tpos + 1) % tss.size();
+					tss[tpos].clear();
+				}
+				if (pos < s.size()) {
+					tss[tpos] += s[pos];
+				}
+			}
 		};
 	private:
 		REstring source;
@@ -307,7 +315,7 @@ namespace RE
 		void CheckNFA() const;
 
 		// nonconst members
-		void NextToken() { ts.Advance(); token = ts.GetToken(); }
+		void NextToken(const bool beginSubstring = true) { ts.Advance(beginSubstring); token = ts.GetToken(); }
 		void AddToAlphabet(const Character ch) { alphabetTemp.emplace(ch); }
 		void MakeDFA();
 		void REtoNFA();
@@ -338,6 +346,7 @@ namespace RE
 		void PMax(int& max, Constants::ClosureType& ty);
 		 int PGetInteger();
 		void ThrowInvalidRegex(const size_t position) const;
+		void ThrowInvalidRegex(const size_t position, const REstring range) const;
 		void ThrowInvalidRegex(const std::string& message) const;
 	public:
 		Regexp(const REstring& string);
@@ -357,8 +366,9 @@ namespace RE
 #endif // REGEX_PRINT_FA_STATE
 	};
 
-	std::istream& operator>>(std::istream& is, REstring& string);
-	std::string GetGlyph(const Character ch, const Constants::GlyphType type);
+#if REGEX_PRINT_FA_STATE
+	std::string GetGlyph(const Character ch);
+#endif // REGEX_PRINT_FA_STATE
 }
 
 #endif // REGEXPR_HPP

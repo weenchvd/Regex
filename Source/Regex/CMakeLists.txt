@@ -17,7 +17,6 @@ configure_file("regexpr_config.hpp.in" "${CMAKE_CURRENT_SOURCE_DIR}/regexpr_conf
 set(EXEC_NAME "regexpr")
 set(SOURCE_CXX_LIST		"${EXEC_NAME}_main.cpp"
 						"${EXEC_NAME}.cpp"
-						"printFA.cpp"
 						"../Error/error.cpp"
 						)
 

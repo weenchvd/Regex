@@ -53,16 +53,25 @@ namespace RE
 	using Character = unsigned int;
 	using Index = size_t;
 	using Number = size_t;
-	using CharacterFlag = Character;
+	using CharacterFlags = Character;
 
-	enum CharacterFlags : CharacterFlag {
-		CHARFL_NOTCHAR	= 0x80000000,		// Character bit #32: 0 == Character, 1 == not Character
-		CHARFL_NEGATED	= 0x40000000,		// Character bit #31: 0 == LITERAL, 1 == NEGATED LITERAL (any other than this)
+	enum CharacterFlag_ : CharacterFlags {
+		CHARFL_NOTCHAR	= 0x80000000,		// Character bit #32: not Character
+		CHARFL_NEGATED	= 0x40000000,		// Character bit #31: NEGATED LITERAL (any other than this)
 		CHARFL_NOFLAGS	= 0x00000000,		// NO FLAGS
 		CHARFL_ALLFLAGS	= CHARFL_NOTCHAR | CHARFL_NEGATED | CHARFL_NOFLAGS
 	};
 
-#define ERASE_ALL_CHARACTER_FLAGS(ch) ch & ~CHARFL_ALLFLAGS
+#define CHARACTER_FLAG_SET(ch, flag) ch | flag
+#define CHARACTER_FLAG_ERASE(ch, flag) ch & ~flag
+
+	using RegexpFlags = unsigned int;
+
+	enum RegexpFlag : RegexpFlags {
+		REGFL_NEGATED	= 0x80000000,		// uint bit #32: negated characters are present
+		REGFL_NOFLAGS	= 0x00000000,		// NO FLAGS
+		REGFL_ALLFLAGS	= REGFL_NEGATED | REGFL_NOFLAGS
+	};
 
 	namespace Constants
 	{
@@ -241,7 +250,10 @@ namespace RE
 			size_t tpos;					// index of the array of token substrings
 		public:
 			TokenStream(REstring& string)
-				: s{ string }, pos{ 0 }, tpos{ 0 } { tss.resize(ringBufferSize); }
+				: s{ string }, pos{ std::numeric_limits<size_t>::max() }, tpos{ 0 }
+			{
+				tss.resize(ringBufferSize);
+			}
 
 			TokenStream(const TokenStream& other) = delete;
 			TokenStream& operator=(const TokenStream& other) = delete;
@@ -276,6 +288,7 @@ namespace RE
 		NFA nfa;
 		DFA dfa;
 		Character last;
+		RegexpFlags fl;
 	private:
 		// const members
 		std::set<const NFAnode*> Delta(
@@ -314,6 +327,14 @@ namespace RE
 
 		void CheckNFA() const;
 
+		DFAnode* TakeStepThroughDFA(
+			const DFAnode* current,
+			const Character ch) const;
+
+		std::vector<DFAnode*> TakeStepThroughDFA(
+			std::vector<DFAnode*>& currentState,
+			const Character ch) const;
+
 		// nonconst members
 		void NextToken(const bool beginSubstring = true) { ts.Advance(beginSubstring); token = ts.GetToken(); }
 		void AddToAlphabet(const Character ch) { alphabetTemp.emplace(ch); }
@@ -321,6 +342,7 @@ namespace RE
 		void REtoNFA();
 		std::vector<DFAnode*> NFAtoDFA();
 		void MinimizeDFA(const std::vector<DFAnode*> nodes);
+		void SetFlags();
 	private:
 		// Parsing
 		 NFA PGoal();
@@ -332,13 +354,13 @@ namespace RE
 		 NFA PBlock();
 		 NFA PCharacterClass();
 		bool PNegation();
-		 NFA PCharacterClassRange(const CharacterFlag flags, const Constants::AtomType type);
-		void PCharacterClassRangePrime(const CharacterFlag flags, const Constants::AtomType type, NFA& a);
+		 NFA PCharacterClassRange(const CharacterFlags flags, const Constants::AtomType type);
+		void PCharacterClassRangePrime(const CharacterFlags flags, const Constants::AtomType type, NFA& a);
 		void CheckRange(Character firstC, Character lastC);
 		 NFA PAtom(
-				const CharacterFlag flags = CHARFL_NOFLAGS,
+				const CharacterFlags flags = CHARFL_NOFLAGS,
 				const Constants::AtomType type = Constants::AtomType::STANDART);
-		 NFA PEscape(const CharacterFlag flags, const Constants::AtomType type);
+		 NFA PEscape(const CharacterFlags flags, const Constants::AtomType type);
 		bool PIsEscape(Character& ch, const Constants::AtomType type);
 		void PClosure(NFA& a);
 		void PCount(int& min, int& max, Constants::ClosureType& ty);
@@ -355,6 +377,9 @@ namespace RE
 		Regexp& operator=(const Regexp& other) = delete;
 		Regexp(Regexp&& other) = delete;
 		Regexp& operator=(Regexp&& other) = delete;
+
+		// const members
+		bool Match(const REstring& string);
 
 		// nonconst members
 		void PutRE(const REstring& string);

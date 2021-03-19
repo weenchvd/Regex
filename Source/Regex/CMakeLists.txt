@@ -8,7 +8,7 @@ project("Regex" VERSION 0.1)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
-option(REGEX_PRINT_FA_STATE "Output the state of the finite state machines in the stdout" ON)
+option(REGEX_PRINT_FA_STATE "Output the state of the finite state machines in the stdout" OFF)
 
 
 

@@ -1,0 +1,59 @@
+// Next line in order separated by a space: 'prefix RE' 'prefix ValidString' 'prefix InvalidString'. The prefixes must be different. 1 space must follow any prefix (it is ignored). The prefix must only contain 1 symbol. The prefix must not occur in any RE or STRING
+# $ %
+
+# a*b*c
+$ c
+$ ac
+$ bc
+$ abc
+$ aaaac
+$ abbbc
+$ bbbbbc
+$ aaaaabbc
+% a
+% b
+% cc
+% ab
+% aaabbb
+% abcc
+% cabc
+% abac
+% bac
+
+# a *b+
+$ ab
+$ abb
+$ a b
+$ a   bb
+$ a bbbbb
+$ a             bbbbbbbbb
+% cb
+% c b
+%  bb
+%       bbb
+% a       c
+% a       
+% a
+% abx
+% ab 
+% a     z
+
+# a(b|[^bk])x|a([^de])z
+$ abx
+$ adx
+$ aax
+$ ayx
+$ abz
+$ akz
+$ aaz
+$ ayz
+% ayzz
+% akx
+% abc
+% abb
+% adz
+% aez
+% bkz
+% aky
+% aab
+% aaaa

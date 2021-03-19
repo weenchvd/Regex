@@ -40,6 +40,10 @@ a\\+
 (a\+0)+
 a\|b
 a\b
+abTcd|efgThij
+abTcd|efTgh
+abRSTUVcd|efRSTUVgh
+(ab|ef)RSTUV(cd|gh)
 a[bc]
 [bc]
 [bc]+
@@ -56,3 +60,12 @@ a[^ \0\t]\0
 a[^\0- ]
 a[^\bab]
 a[12\b-\n3]b
+ab[^b]d|abbd
+a(b|[^b])c
+a(b|[^bcde])f
+a(b|[^bcde]*)f
+a(b*|[^bcde]*)f
+a(b|[^bcde])*f
+a(b|[^cd])x|a([^cd]|b)x
+a(b|[^bc])x|a(b|[^de])z
+a(b|[^bc])x|a(b|[^debc])z

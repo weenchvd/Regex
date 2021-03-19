@@ -10,6 +10,7 @@
 #include<algorithm>
 #include<memory>
 #include<cctype>
+#include<limits>
 #include"regexpr_config.hpp"
 #include"../Error/error.hpp"
 #include"regexpr.hpp"
@@ -408,6 +409,8 @@ namespace RE
 		}
 		s = other.s;
 		pos = other.pos;
+		tss = other.tss;
+		tpos = other.tpos;
 		return *this;
 	}
 
@@ -433,7 +436,7 @@ namespace RE
 		return s;
 	}
 
-	Regexp::TokenStream::TokenType Regexp::TokenStream::GetTokenType(const Character ch) const
+	inline Regexp::TokenStream::TokenType Regexp::TokenStream::GetTokenType(const Character ch) const
 	{
 		switch (ch) {
 		case SPEC_LPAR:
@@ -453,7 +456,7 @@ namespace RE
 		}
 	}
 
-	std::pair<Character, Regexp::TokenStream::TokenType> Regexp::TokenStream::GetToken() const
+	inline std::pair<Character, Regexp::TokenStream::TokenType> Regexp::TokenStream::GetToken() const
 	{
 		if (pos >= s.size()) {
 			return { CHARFL_NOTCHAR, TokenType::EOS };
@@ -603,6 +606,52 @@ namespace RE
 			ThrowInvalidRegex("This regular expression is invalid. It matches any string");
 		}
 	}
+	
+	// returns a pointer to the 'DFAnode' if there is a transition for this character,
+	// otherwise it returns 'nullptr'
+	inline DFAnode* Regexp::TakeStepThroughDFA(const DFAnode* current, const Character ch) const
+	{
+		return const_cast<DFAnode*>(FindTransition(current, ch));
+	}
+	
+	// returns an array of 'DFAnode' pointers if there is a transition for this character,
+	// otherwise it returns an empty array
+	std::vector<DFAnode*> Regexp::TakeStepThroughDFA(std::vector<DFAnode*>& currentState, const Character ch) const
+	{
+		constexpr size_t defaultSize = 8;
+		std::vector<DFAnode*> transitions;
+		transitions.reserve(defaultSize);
+		for (const DFAnode* p : currentState) {
+			DFAnode* node = const_cast<DFAnode*>(FindTransition(p, ch));
+			if (node) {
+				transitions.push_back(node);
+			}
+			const Character firstNegated = CHARACTER_FLAG_SET(0, CHARFL_NEGATED);
+			TransitionTable::const_iterator itBeg =
+				std::lower_bound(p->trans.begin(), p->trans.end(), firstNegated, LessTransitionCharacter{});
+			if (itBeg != p->trans.end()) {
+				auto it = itBeg;
+				std::vector<DFAnode*> negated;
+				negated.reserve(defaultSize);
+				while (it != p->trans.end()) {
+					negated.push_back(it->second);
+					++it;
+				}
+				std::sort(negated.begin(), negated.end());
+				DFAnode* excluded = const_cast<DFAnode*>(FindTransition(p, CHARACTER_FLAG_SET(ch, CHARFL_NEGATED)));
+				DFAnode* prev = nullptr;
+				for (DFAnode* cur : negated) {
+					if (prev != cur) {
+						if (cur != excluded) {
+							transitions.push_back(cur);
+						}
+						prev = cur;
+					}
+				}
+			}
+		}
+		return transitions;
+	}
 
 #if REGEX_PRINT_FA_STATE
 	void Regexp::MakeDFA()
@@ -616,12 +665,14 @@ namespace RE
 		MinimizeDFA(nodes);
 		std::cout << std::endl << "RE: " << this->source << std::endl;
 		PrintDFA(std::cout, *this);
+		SetFlags();
 	}
 #else
 	void Regexp::MakeDFA()
 	{
 		REtoNFA();
 		MinimizeDFA(NFAtoDFA());
+		SetFlags();
 	}
 #endif // REGEX_PRINT_FA_STATE
 
@@ -746,10 +797,20 @@ namespace RE
 		}
 	}
 
+	void Regexp::SetFlags()
+	{
+		for (const Character ch : alphabet) {
+			if (ch & CHARFL_NEGATED) {
+				fl |= REGFL_NEGATED;
+				break;
+			}
+		}
+	}
+
 	// parse Goal
 	NFA Regexp::PGoal()
 	{
-		token = ts.GetToken();
+		NextToken();
 		return PAlternation();
 	}
 
@@ -870,7 +931,7 @@ namespace RE
 	// parse CharacterClass
 	NFA Regexp::PCharacterClass()
 	{
-		const CharacterFlag flag = PNegation() ? CHARFL_NEGATED : CHARFL_NOFLAGS;
+		const CharacterFlags flag = PNegation() ? CHARFL_NEGATED : CHARFL_NOFLAGS;
 		return PCharacterClassRange(flag, Constants::AtomType::CHARCLASS);
 	}
 
@@ -885,7 +946,7 @@ namespace RE
 	}
 
 	// parse CharacterClassRange
-	NFA Regexp::PCharacterClassRange(const CharacterFlag flags, const Constants::AtomType type)
+	NFA Regexp::PCharacterClassRange(const CharacterFlags flags, const Constants::AtomType type)
 	{
 		NFA a = PAtom(flags, type);
 		PCharacterClassRangePrime(flags, type, a);
@@ -893,7 +954,7 @@ namespace RE
 	}
 
 	// parse CharacterClassRange'
-	void Regexp::PCharacterClassRangePrime(const CharacterFlag flags, const Constants::AtomType type, NFA& a)
+	void Regexp::PCharacterClassRangePrime(const CharacterFlags flags, const Constants::AtomType type, NFA& a)
 	{
 		switch (token.second) {
 		case Regexp::TokenStream::TokenType::EOS:
@@ -936,15 +997,15 @@ namespace RE
 	void RE::Regexp::CheckRange(Character firstC, Character lastC)
 	{
 		constexpr size_t qty = 3;
-		firstC = ERASE_ALL_CHARACTER_FLAGS(firstC);
-		lastC = ERASE_ALL_CHARACTER_FLAGS(lastC);
+		firstC = CHARACTER_FLAG_ERASE(firstC, CHARFL_ALLFLAGS);
+		lastC = CHARACTER_FLAG_ERASE(lastC, CHARFL_ALLFLAGS);
 		if (firstC >= lastC) {
 			ThrowInvalidRegex(ts.GetPosition(), ts.GetSubstring(qty));
 		}
 	}
 
 	// parse Atom
-	NFA RE::Regexp::PAtom(const CharacterFlag flags, const Constants::AtomType type)
+	NFA RE::Regexp::PAtom(const CharacterFlags flags, const Constants::AtomType type)
 	{
 		switch (token.second) {
 		case Regexp::TokenStream::TokenType::EOS:
@@ -982,7 +1043,7 @@ namespace RE
 	}
 
 	// parse Escape
-	NFA RE::Regexp::PEscape(const CharacterFlag flags, const Constants::AtomType type)
+	NFA RE::Regexp::PEscape(const CharacterFlags flags, const Constants::AtomType type)
 	{
 		switch (token.second) {
 		case Regexp::TokenStream::TokenType::EOS:
@@ -1222,7 +1283,8 @@ namespace RE
 	}
 
 	Regexp::Regexp(const REstring& string)
-		: source{ string }, ts{ source }, nfa{ CHARFL_NOTCHAR }, last{ CHARFL_NOTCHAR }
+		: source{ string }, ts{ source }, nfa{ CHARFL_NOTCHAR }, last{ CHARFL_NOTCHAR },
+		fl{ REGFL_NOFLAGS }
 	{
 		if (string.size() == 0) {
 			throw Error::InvalidRegex{ "Empty regular expression " };
@@ -1230,7 +1292,42 @@ namespace RE
 		MakeDFA();
 	}
 
-	void RE::Regexp::PutRE(const REstring& string)
+	bool Regexp::Match(const REstring& string)
+	{
+		if (fl & REGFL_NEGATED) {
+			std::vector<DFAnode*>cur{ {dfa.first} };
+			size_t pos = 0;
+			while (pos < string.size()) {
+				cur = TakeStepThroughDFA(cur, string[pos]);
+				if (cur.size() == 0) {
+					return false;
+				}
+				++pos;
+			}
+			for (const DFAnode* p : cur) {
+				if (p->acc) {
+					return true;
+				}
+			}
+		}
+		else {
+			DFAnode* cur = dfa.first;
+			size_t pos = 0;
+			while (pos < string.size()) {
+				cur = TakeStepThroughDFA(cur, string[pos]);
+				if (cur == nullptr) {
+					return false;
+				}
+				++pos;
+			}
+			if (cur->acc) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	void Regexp::PutRE(const REstring& string)
 	{
 		if (string.size() == 0) {
 			throw Error::InvalidRegex{ "Empty regular expression " };
@@ -1242,13 +1339,14 @@ namespace RE
 		nfa = NFA{ CHARFL_NOTCHAR };
 		dfa = DFA{};
 		last = CHARFL_NOTCHAR;
+		fl = REGFL_NOFLAGS;
 		MakeDFA();
 	}
 
 #if REGEX_PRINT_FA_STATE
 	std::string GetGlyph(const Character ch)
 	{
-		const Character c = ERASE_ALL_CHARACTER_FLAGS(ch);
+		const Character c = CHARACTER_FLAG_ERASE(ch, CHARFL_ALLFLAGS);
 		std::string s;
 		if (ch & CHARFL_NEGATED) {
 			s += LIT_CARET;

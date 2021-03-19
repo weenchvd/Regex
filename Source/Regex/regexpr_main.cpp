@@ -10,6 +10,7 @@
 #include<algorithm>
 #include<memory>
 #include<cctype>
+#include<limits>
 #include"../Error/error.hpp"
 #include"regexpr.hpp"
 

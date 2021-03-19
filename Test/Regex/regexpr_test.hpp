@@ -7,7 +7,22 @@ namespace RegexTest
 		std::vector<RE::REstring> vec;
 	};
 
+	struct RegexMatchCase {
+		RE::REstring re;
+		std::vector<RE::REstring> valid;
+		std::vector<RE::REstring> invalid;
+	};
+
+	struct RegexMatch {
+		std::vector<RegexMatchCase> vec;
+	};
+
 	std::istream& operator>>(std::istream& is, RegexVector& rvector);
+	std::istream& operator>>(std::istream& is, RegexMatch& rmatch);
+	std::ostream& operator<<(std::ostream& os, const RegexMatch& rmatch);
+	std::ostream& operator<<(std::ostream& os, const RegexMatchCase& rmcase);
+
+	inline void PrintNumberOfTests(std::ostream& os, const size_t n);
 }
 
 #endif // REGEXPR_TEST_HPP

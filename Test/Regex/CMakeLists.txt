@@ -22,6 +22,7 @@ target_include_directories(${EXEC_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Source")
 
 # Add tests and install targets if needed.
 add_test(NAME ${EXEC_NAME} COMMAND ${EXEC_NAME})
-install(FILES "ValidRegexes.txt" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
-install(FILES "InvalidRegexes.txt" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+install(FILES "RegexValid.txt" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+install(FILES "RegexInvalid.txt" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
 install(FILES "RegexMatch_001.txt" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+install(FILES "RegexMatch_002.txt" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")

@@ -87,7 +87,7 @@ namespace RegexTest
 
 	TEST(RegexpTest, ValidRegexes) {
 		INIT_COUNTER;
-		const std::string fileName{ "ValidRegexes.txt" };
+		const std::string fileName{ "RegexValid.txt" };
 		std::ifstream ifs{ fileName };
 		ASSERT_TRUE(ifs);
 		RegexVector valid;
@@ -101,7 +101,7 @@ namespace RegexTest
 
 	TEST(RegexpTest, InvalidRegexes) {
 		INIT_COUNTER;
-		const std::string fileName{ "InvalidRegexes.txt" };
+		const std::string fileName{ "RegexInvalid.txt" };
 		std::ifstream ifs{ fileName };
 		ASSERT_TRUE(ifs);
 		RegexVector invalid;
@@ -114,33 +114,11 @@ namespace RegexTest
 	}
 
 	TEST(RegexpTest, RegexMatch001) {
-		INIT_COUNTER;
-		const std::string fileName{ "RegexMatch_001.txt" };
-		std::ifstream ifs{ fileName };
-		ASSERT_TRUE(ifs);
-		RegexMatch rmatch;
-		ifs >> rmatch;
-		ASSERT_TRUE(ifs.eof());
-		for (const RegexMatchCase& rmcase : rmatch.vec) {
-			try {
-				RE::Regexp re{ rmcase.re }; COUNT;
-				for (const RE::REstring rs : rmcase.valid) {
-					EXPECT_TRUE(re.Match(rs)) << "rs: " << rs << std::endl << rmcase; COUNT;
-				}
-				for (const RE::REstring rs : rmcase.invalid) {
-					EXPECT_FALSE(re.Match(rs)) << "rs: " << rs << std::endl << rmcase; COUNT;
-				}
-			}
-			catch (const Error::InvalidRegex& e) {
-				std::cout << rmcase;
-				FAIL() << "Ctor threw 'InvalidRegex' exception";
-			}
-			catch (...) {
-				std::cout << rmcase;
-				FAIL() << "Someone threw an exception";
-			}
-		}
-		PRINT_COUNTER;
+		RegexMatchTest("RegexMatch_001.txt");
+	}
+
+	TEST(RegexpTest, RegexMatch002) {
+		RegexMatchTest("RegexMatch_002.txt");
 	}
 
 	///----------------------------------------------------------------------------------------------------
@@ -196,9 +174,7 @@ namespace RegexTest
 				}
 				if (prefix != prefixMatchValid && prefix != prefixMatchInvalid) {
 					if (prefix == prefixRE) {
-						for (int i = 0; i < prefixRE.size(); ++i) {
-							is.unget();
-						}
+						is.unget();
 						break;
 					}
 					is.setstate(std::ios_base::failbit);
@@ -206,7 +182,7 @@ namespace RegexTest
 				}
 				is.get();
 				RE::REstring s;
-				getline(is, s);
+				getline(is, s, prefix[0]);
 				if (!is) {
 					if (is.eof()) break;
 					else return is;
@@ -268,5 +244,37 @@ namespace RegexTest
 	inline void PrintNumberOfTests(std::ostream& os, const size_t n)
 	{
 		os << "               Number of subtests in this test: " << n << std::endl;
+	}
+
+	void RegexMatchTest(const std::string fileName)
+	{
+		INIT_COUNTER;
+		std::ifstream ifs{ fileName };
+		ASSERT_TRUE(ifs) << "File: " << fileName;
+		RegexMatch rmatch;
+		ifs >> rmatch;
+		ASSERT_TRUE(ifs.eof()) << "File: " << fileName;
+		for (const RegexMatchCase& rmcase : rmatch.vec) {
+			try {
+				RE::Regexp re{ rmcase.re }; COUNT;
+				for (const RE::REstring rs : rmcase.valid) {
+					EXPECT_TRUE(re.Match(rs)) << "File: " << fileName << std::endl
+						<< "rs: " << rs << std::endl << rmcase; COUNT;
+				}
+				for (const RE::REstring rs : rmcase.invalid) {
+					EXPECT_FALSE(re.Match(rs)) << "File: " << fileName << std::endl
+						<< "rs: " << rs << std::endl << rmcase; COUNT;
+				}
+			}
+			catch (const Error::InvalidRegex& e) {
+				std::cout << rmcase;
+				FAIL() << "File: " << fileName << std::endl << "Ctor threw 'InvalidRegex' exception";
+			}
+			catch (...) {
+				std::cout << rmcase;
+				FAIL() << "File: " << fileName << std::endl << "Someone threw an exception";
+			}
+		}
+		PRINT_COUNTER;
 	}
 } // namespace RegexTest

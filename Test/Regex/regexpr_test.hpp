@@ -23,6 +23,7 @@ namespace RegexTest
 	std::ostream& operator<<(std::ostream& os, const RegexMatchCase& rmcase);
 
 	inline void PrintNumberOfTests(std::ostream& os, const size_t n);
+	void RegexMatchTest(const std::string fileName);
 }
 
 #endif // REGEXPR_TEST_HPP

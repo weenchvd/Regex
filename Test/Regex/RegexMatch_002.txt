@@ -1,0 +1,72 @@
+// Next line in order separated by a space: 'RE prefix' 'ValidString prefix & suffix' 'InvalidString prefix & suffix'. The prefixes must be different. 1 space must follow any prefix (it is ignored). Each ValidString and InvalidString must end with a suffix. The prefix must only contain 1 symbol. The prefix must not occur in any RE or STRING
+# $ %
+
+# a\n*b
+$ ab$
+$ a
+b$
+$ a
+
+b$
+$ a
+
+
+
+
+b$
+% ac%
+% bb%
+% A
+b%
+% aB%
+% a
+
+
+c%
+% a
+
+%
+% 
+
+
+b%
+
+# abc[^\b]d
+$ abcxd$
+$ abcCd$
+$ abcDd$
+$ abc+d$
+$ abc d$
+$ abc
+d$
+$ abc!d$
+$ abc\d$
+$ abc	d$
+% abcd%
+% acccd%
+% bcDd%
+%  bcxd%
+% abcx%
+
+# /\*([^*]|\*+[^/])*\*/
+$ /*a*/$
+$ /* abcd */$
+$ /* abcd
+efgh
+ijkl */$
+$ /*	sdf				fff*/$
+$ /**/$
+$ /******/$
+$ /*** ** **** ***/$
+% * abcd */%
+% /*/%
+% /* abcd /%
+% /* abcd *%
+% //*abcd*/%
+% / abcd */%
+% /*/*%
+% \**/%
+%     %
+% 	/**/%
+% 
+/* abcd */%

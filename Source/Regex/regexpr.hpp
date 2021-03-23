@@ -75,6 +75,8 @@ namespace RE
 
 	namespace Constants
 	{
+		constexpr unsigned int nUnicodeDigits = 4; // minimum number of Unicode code point digits after '\u'
+
 		enum class ClosureType : unsigned char {
 			NOTYPE,
 			FINITE,
@@ -230,7 +232,7 @@ namespace RE
 
 	using SubsetTable = std::vector<SubsetTableEntry>;
 
-	using REstring = std::string;
+	using REstring = std::u32string;
 
 	using SetPartition = std::vector<std::vector<DFAnode*>>;
 	constexpr size_t ringBufferSize = 4;
@@ -368,7 +370,7 @@ namespace RE
 		void PMax(int& max, Constants::ClosureType& ty);
 		 int PGetInteger();
 		void ThrowInvalidRegex(const size_t position) const;
-		void ThrowInvalidRegex(const size_t position, const REstring range) const;
+		void ThrowInvalidRegex(const size_t position, const REstring& range) const;
 		void ThrowInvalidRegex(const std::string& message) const;
 	public:
 		Regexp(const REstring& string);
@@ -391,9 +393,8 @@ namespace RE
 #endif // REGEX_PRINT_FA_STATE
 	};
 
-#if REGEX_PRINT_FA_STATE
-	std::string GetGlyph(const Character ch);
-#endif // REGEX_PRINT_FA_STATE
+	std::string GetGlyph(const Character ch, bool withQuotes = false);
+	std::string GetGlyph(const REstring& string);
 }
 
 #endif // REGEXPR_HPP

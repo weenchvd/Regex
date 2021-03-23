@@ -11,6 +11,8 @@
 #include<memory>
 #include<cctype>
 #include<limits>
+#include<locale>
+#include<codecvt>
 #include "Regex/regexpr.hpp"
 #include "Error/error.hpp"
 #include "gtest/gtest.h"
@@ -87,28 +89,32 @@ namespace RegexTest
 
 	TEST(RegexpTest, ValidRegexes) {
 		INIT_COUNTER;
+		std::locale loc(std::locale(), new std::codecvt_utf8<char32_t>);
 		const std::string fileName{ "RegexValid.txt" };
-		std::ifstream ifs{ fileName };
+		std::basic_ifstream<char32_t> ifs{ fileName };
 		ASSERT_TRUE(ifs);
+		ifs.imbue(loc);
 		RegexVector valid;
 		ifs >> valid;
 		ASSERT_TRUE(ifs.eof());
 		for (RE::REstring& s : valid.vec) {
-			ASSERT_NO_THROW(RE::Regexp{ s }) << "RE: " << s; COUNT;
+			ASSERT_NO_THROW(RE::Regexp{ s }) << "RE: " << RE::GetGlyph(s); COUNT;
 		}
 		PRINT_COUNTER;
 	}
 
 	TEST(RegexpTest, InvalidRegexes) {
 		INIT_COUNTER;
+		std::locale loc(std::locale(), new std::codecvt_utf8<char32_t>);
 		const std::string fileName{ "RegexInvalid.txt" };
-		std::ifstream ifs{ fileName };
+		std::basic_ifstream<char32_t> ifs{ fileName };
 		ASSERT_TRUE(ifs);
+		ifs.imbue(loc);
 		RegexVector invalid;
 		ifs >> invalid;
 		ASSERT_TRUE(ifs.eof());
 		for (RE::REstring& s : invalid.vec) {
-			ASSERT_THROW(RE::Regexp{ s }, Error::InvalidRegex) << "RE: " << s; COUNT;
+			ASSERT_THROW(RE::Regexp{ s }, Error::InvalidRegex) << "RE: " << RE::GetGlyph(s); COUNT;
 		}
 		PRINT_COUNTER;
 	}
@@ -121,9 +127,13 @@ namespace RegexTest
 		RegexMatchTest("RegexMatch_002.txt");
 	}
 
+	TEST(RegexpTest, RegexMatch003) {
+		RegexMatchTest("RegexMatch_003.txt");
+	}
+
 	///----------------------------------------------------------------------------------------------------
 
-	std::istream& operator>>(std::istream& is, RegexVector& rvector)
+	std::basic_istream<char32_t>& operator>>(std::basic_istream<char32_t>& is, RegexVector& rvector)
 	{
 		RE::REstring line;
 		while (is) {
@@ -135,7 +145,7 @@ namespace RegexTest
 		return is;
 	}
 
-	std::istream& operator>>(std::istream& is, RegexMatch& rmatch)
+	std::basic_istream<char32_t>& operator>>(std::basic_istream<char32_t>& is, RegexMatch& rmatch)
 	{
 		is.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // first line is comment, skip it
 		RE::REstring secondLine;			// line of symbols
@@ -144,18 +154,25 @@ namespace RegexTest
 		RE::REstring prefixRE;
 		RE::REstring prefixMatchValid;
 		RE::REstring prefixMatchInvalid;
-		std::istringstream iss{ secondLine };
+		std::basic_istringstream<char32_t> iss{ secondLine };
 		iss >> prefixRE >> prefixMatchValid >> prefixMatchInvalid;
 		if (!iss) {
 			is.setstate(std::ios_base::failbit);
 			return is;
 		}
+		InputBuffer ibuff;
 		RegexMatch rm;
 		while (is) {
 			RegexMatchCase rmcase;
 			RE::REstring prefix;
-			is >> prefix;
-			if (!is) return is;
+			if (ibuff) {
+				prefix = ibuff.buf;
+				ibuff.full = false;
+			}
+			else {
+				is >> prefix;
+				if (!is) return is;
+			}
 			if (prefix != prefixRE) {
 				is.setstate(std::ios_base::failbit);
 				return is;
@@ -174,7 +191,8 @@ namespace RegexTest
 				}
 				if (prefix != prefixMatchValid && prefix != prefixMatchInvalid) {
 					if (prefix == prefixRE) {
-						is.unget();
+						ibuff.buf = prefix;
+						ibuff.full = true;
 						break;
 					}
 					is.setstate(std::ios_base::failbit);
@@ -209,18 +227,19 @@ namespace RegexTest
 		std::string sp{ "  " };
 		os << sp << "RegexMatch.vec.size(): " << rmatch.vec.size() << std::endl;
 		for (int i = 0; i < rmatch.vec.size(); ++i) {
-			os << sp + sp << "RegexMatch.vec[" << i << "].re: " << rmatch.vec[i].re << std::endl;
+			os << sp + sp << "RegexMatch.vec[" << i << "].re: " << RE::GetGlyph(rmatch.vec[i].re) << std::endl;
 			os << sp + sp << "RegexMatch.vec[" << i << "].valid.size(): "
 				<< rmatch.vec[i].valid.size() << std::endl;
 			for (int j = 0; j < rmatch.vec[i].valid.size(); ++j) {
+
 				os << sp + sp + sp << "RegexMatch.vec[" << i << "].valid[" << j << "]: "
-					<< rmatch.vec[i].valid[j] << std::endl;
+					<< RE::GetGlyph(rmatch.vec[i].valid[j]) << std::endl;
 			}
 			os << sp + sp << "RegexMatch.vec[" << i << "].invalid.size(): "
 				<< rmatch.vec[i].invalid.size() << std::endl;
 			for (int j = 0; j < rmatch.vec[i].invalid.size(); ++j) {
 				os << sp + sp + sp << "RegexMatch.vec[" << i << "].invalid[" << j << "]: "
-					<< rmatch.vec[i].invalid[j] << std::endl;
+					<< RE::GetGlyph(rmatch.vec[i].invalid[j]) << std::endl;
 			}
 		}
 		return os;
@@ -229,14 +248,14 @@ namespace RegexTest
 	std::ostream& operator<<(std::ostream& os, const RegexMatchCase& rmcase)
 	{
 		std::string sp{ "  " };
-		os << sp << "RegexMatchCase.re: " << rmcase.re << std::endl;
+		os << sp << "RegexMatchCase.re: " << RE::GetGlyph(rmcase.re) << std::endl;
 		os << sp << "RegexMatchCase.valid.size(): " << rmcase.valid.size() << std::endl;
 		for (int j = 0; j < rmcase.valid.size(); ++j) {
-			os << sp + sp << "RegexMatchCase.valid[" << j << "]: " << rmcase.valid[j] << std::endl;
+			os << sp + sp << "RegexMatchCase.valid[" << j << "]: " << RE::GetGlyph(rmcase.valid[j]) << std::endl;
 		}
 		os << sp << "RegexMatchCase.invalid.size(): " << rmcase.invalid.size() << std::endl;
 		for (int j = 0; j < rmcase.invalid.size(); ++j) {
-			os << sp + sp << "RegexMatchCase.invalid[" << j << "]: " << rmcase.invalid[j] << std::endl;
+			os << sp + sp << "RegexMatchCase.invalid[" << j << "]: " << RE::GetGlyph(rmcase.invalid[j]) << std::endl;
 		}
 		return os;
 	}
@@ -249,8 +268,10 @@ namespace RegexTest
 	void RegexMatchTest(const std::string fileName)
 	{
 		INIT_COUNTER;
-		std::ifstream ifs{ fileName };
+		std::locale loc(std::locale(), new std::codecvt_utf8<char32_t>);
+		std::basic_ifstream<char32_t> ifs{ fileName };
 		ASSERT_TRUE(ifs) << "File: " << fileName;
+		ifs.imbue(loc);
 		RegexMatch rmatch;
 		ifs >> rmatch;
 		ASSERT_TRUE(ifs.eof()) << "File: " << fileName;
@@ -259,11 +280,11 @@ namespace RegexTest
 				RE::Regexp re{ rmcase.re }; COUNT;
 				for (const RE::REstring rs : rmcase.valid) {
 					EXPECT_TRUE(re.Match(rs)) << "File: " << fileName << std::endl
-						<< "rs: " << rs << std::endl << rmcase; COUNT;
+						<< "rs: " << RE::GetGlyph(rs) << std::endl << rmcase; COUNT;
 				}
 				for (const RE::REstring rs : rmcase.invalid) {
 					EXPECT_FALSE(re.Match(rs)) << "File: " << fileName << std::endl
-						<< "rs: " << rs << std::endl << rmcase; COUNT;
+						<< "rs: " << RE::GetGlyph(rs) << std::endl << rmcase; COUNT;
 				}
 			}
 			catch (const Error::InvalidRegex& e) {

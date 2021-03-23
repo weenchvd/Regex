@@ -1255,22 +1255,22 @@ namespace RE
 	{
 		std::string message{ "Invalid character '" };
 		if (position < source.size()) {
-			message += std::string{ source, position, 1 };
+			message += GetGlyph(source[position]);
 		}
 		else {
 			message += Strings::eof;
 		}
 		message += "' was encountered after substring '";
-		message += std::string{ source, 0, position } + "'";
+		message += GetGlyph(REstring{ source, 0, position }) + "'";
 		ThrowInvalidRegex(message);
 	}
 
-	void Regexp::ThrowInvalidRegex(const size_t position, const REstring range) const
+	void Regexp::ThrowInvalidRegex(const size_t position, const REstring& range) const
 	{
 		std::string message{ "Invalid range '" };
-		message += range;
+		message += GetGlyph(range);
 		message += "' was encountered after substring '";
-		message += std::string{ source, 0, position - range.size() } + "'";
+		message += GetGlyph(REstring{ source, 0, position - range.size() }) + "'";
 		ThrowInvalidRegex(message);
 	}
 
@@ -1278,7 +1278,7 @@ namespace RE
 	{
 		std::string fullMessage{ message };
 		fullMessage += ". Regular expression: ";
-		fullMessage += source;
+		fullMessage += GetGlyph(source);
 		throw Error::InvalidRegex{ fullMessage };
 	}
 
@@ -1343,8 +1343,7 @@ namespace RE
 		MakeDFA();
 	}
 
-#if REGEX_PRINT_FA_STATE
-	std::string GetGlyph(const Character ch)
+	std::string GetGlyph(const Character ch, bool withQuotes)
 	{
 		const Character c = CHARACTER_FLAG_ERASE(ch, CHARFL_ALLFLAGS);
 		std::string s;
@@ -1357,11 +1356,36 @@ namespace RE
 		else if (c == ASCIICC_DEL) {
 			return s + Strings::del;
 		}
+		else if (c > ASCIICC_LAST && c < ASCIICC_DEL) {
+			if (withQuotes) {
+				s += '\'';
+			}
+			s += static_cast<char>(c);
+			if (withQuotes) {
+				s += '\'';
+			}
+			return s;
+		}
 		else {
-			return s + '\'' + char(c) + '\'';
+			std::ostringstream oss;
+			oss << std::hex << std::uppercase << std::setfill('0') << std::setw(Constants::nUnicodeDigits)
+				<< static_cast<size_t>(ch);
+			s += "\\u";
+			s += oss.str();
+			return s;
 		}
 	}
 
+	std::string GetGlyph(const REstring& string)
+	{
+		std::string s;
+		for (RE::Character c : string) {
+			s += RE::GetGlyph(c);
+		}
+		return s;
+	}
+
+#if REGEX_PRINT_FA_STATE
 	void PrintNFA(std::ostream& os, const RE::Regexp& re)
 	{
 		if (re.nfa.sz == 0) {
@@ -1426,7 +1450,7 @@ namespace RE
 					<< sp << ns << std::setw(cw3 - sp.size() - ns.size()) << it->second << sep
 					<< std::setw(cw4 + sep.size() + cw5) << sp << sep << std::endl;
 				std::ostringstream oss;
-				oss << sp << std::setw(nLetters) << GetGlyph(p->ch) << sp
+				oss << sp << std::setw(nLetters) << GetGlyph(p->ch, true) << sp
 					<< to << sp << ns << numbers.find(p->succ1)->second;
 				os << sep << std::setw(cw1 + sep.size() + cw2 + sep.size() + cw3) << sp
 					<< sep << std::setw(cw4) << std::left << oss.str()
@@ -1528,7 +1552,7 @@ namespace RE
 				<< std::setw(cw4 + sep.size() + cw5) << sp << sep << std::endl;
 			for (const Transition& t : p->trans) {
 				std::ostringstream oss;
-				oss << sp << std::setw(nLetters) << GetGlyph(t.first) << sp
+				oss << sp << std::setw(nLetters) << GetGlyph(t.first, true) << sp
 					<< to << sp << ns << numbers.find(t.second)->second;
 				os << sep << std::setw(cw1 + sep.size() + cw2 + sep.size() + cw3) << sp
 					<< sep << std::setw(cw4) << std::left << oss.str()

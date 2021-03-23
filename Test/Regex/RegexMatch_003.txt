@@ -1,0 +1,58 @@
+// Next line in order separated by a space: 'RE prefix' 'ValidString prefix & suffix' 'InvalidString prefix & suffix'. The prefixes must be different. 1 space must follow any prefix (it is ignored). Each ValidString and InvalidString must end with a suffix. The prefix must only contain 1 symbol. The prefix must not occur in any RE or STRING. This file must be in UTF-8 encoding
+# $ %
+
+# АБ *ВГ
+$ АБВГ$
+$ АБ ВГ$
+$ АБ   ВГ$
+$ АБ       ВГ$
+% АББГ%
+% АВГ%
+% АБ ФВГ%
+%  ВГ%
+% АБВ%
+% АБ ВЁ%
+% АБ ВЇ%
+% ІБ ВГ%
+% ІІ ЇЇ%
+% ЇЇ ЇЇ%
+
+# к[іо]шка
+$ кошка$
+$ кішка$
+% к0шка%
+% кОшка%
+% кїшка%
+% кiшка%
+% кoшка%
+
+# ヰ+[ヱヌネセ]*ズィ
+$ ヰヰヰズィ$
+$ ヰズィ$
+$ ヰヱヌネセズィ$
+$ ヰヱヌネセセセセセズィ$
+$ ヰヱヌネセセネズィ$
+$ ヰヱヌネセヱヌヱヌズィ$
+$ ヰヱズィ$
+$ ヰヌズィ$
+$ ヰヱネズィ$
+% ズィ%
+% セズィ%
+% ヰズズィ%
+% ヰヱィヌネセズィ%
+% ヰヱヰズィ%
+
+# 𡗓{2}𡗔{0,3}𡘃{2,}
+$ 𡗓𡗓𡘃𡘃$
+$ 𡗓𡗓𡗔𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃$
+$ 𡗓𡗓𡗔𡗔𡘃𡘃𡘃$
+$ 𡗓𡗓𡗔𡗔𡗔𡘃𡘃𡘃$
+$ 𡗓𡗓𡗔𡘃𡘃$
+$ 𡗓𡗓𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃𡘃$
+% 𡗓𡗓𡚗𡘃𡘃%
+% 𡗓𡗓 𡘃𡘃%
+% 𡗓𡗓xyz𡘃𡘃%
+% 𡗓𡗔𡗔𡘃𡘃%
+% 𡘃𡘃%
+% 𡗓𡗓𡗔𡗔𡘃%
+% 𡗓𡗓𡗔𡗔𡗔𡗔𡘃𡘃%

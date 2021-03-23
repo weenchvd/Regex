@@ -17,8 +17,18 @@ namespace RegexTest
 		std::vector<RegexMatchCase> vec;
 	};
 
-	std::istream& operator>>(std::istream& is, RegexVector& rvector);
-	std::istream& operator>>(std::istream& is, RegexMatch& rmatch);
+	struct InputBuffer {
+		RE::REstring buf;
+		bool full;
+
+		InputBuffer()
+			: full{ false } {}
+		
+		operator bool() { return full; }
+	};
+
+	std::basic_istream<char32_t>& operator>>(std::basic_istream<char32_t>& is, RegexVector& rvector);
+	std::basic_istream<char32_t>& operator>>(std::basic_istream<char32_t>& is, RegexMatch& rmatch);
 	std::ostream& operator<<(std::ostream& os, const RegexMatch& rmatch);
 	std::ostream& operator<<(std::ostream& os, const RegexMatchCase& rmcase);
 

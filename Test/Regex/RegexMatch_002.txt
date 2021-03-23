@@ -1,4 +1,4 @@
-// Next line in order separated by a space: 'RE prefix' 'ValidString prefix & suffix' 'InvalidString prefix & suffix'. The prefixes must be different. 1 space must follow any prefix (it is ignored). Each ValidString and InvalidString must end with a suffix. The prefix must only contain 1 symbol. The prefix must not occur in any RE or STRING
+// Next line in order separated by a space: 'RE prefix' 'ValidString prefix & suffix' 'InvalidString prefix & suffix'. The prefixes must be different. 1 space must follow any prefix (it is ignored). Each ValidString and InvalidString must end with a suffix. The prefix must only contain 1 symbol. The prefix must not occur in any RE or STRING. This file must be in UTF-8 encoding
 # $ %
 
 # a\n*b

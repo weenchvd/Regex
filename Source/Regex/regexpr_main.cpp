@@ -26,7 +26,7 @@ int main()
 		const std::string inputFileName{ "Regexes.txt" };
 		std::basic_ifstream<char32_t> ifs{ inputFileName };
 		if (!ifs) {
-			Error::ErrPrint(std::cerr, Error::Level::ERROR, Error::Type::INFILE, inputFileName);
+			Error::ErrPrint(std::cerr, Error::Level::ERROR, Error::Type::INFILE, "File: " + inputFileName);
 			return 1;
 		}
 		ifs.imbue(loc);

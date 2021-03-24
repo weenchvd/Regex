@@ -55,15 +55,15 @@ namespace RE
 	using Number = size_t;
 	using CharacterFlags = Character;
 
-	enum CharacterFlag_ : CharacterFlags {
+	enum CharacterFlag : CharacterFlags {
 		CHARFL_NOTCHAR	= 0x80000000,		// Character bit #32: not Character
 		CHARFL_NEGATED	= 0x40000000,		// Character bit #31: NEGATED LITERAL (any other than this)
 		CHARFL_NOFLAGS	= 0x00000000,		// NO FLAGS
 		CHARFL_ALLFLAGS	= CHARFL_NOTCHAR | CHARFL_NEGATED | CHARFL_NOFLAGS
 	};
 
-#define CHARACTER_FLAG_SET(ch, flag) ch | flag
-#define CHARACTER_FLAG_ERASE(ch, flag) ch & ~flag
+#define CHARACTER_FLAG_SET(target, flag) target | flag
+#define CHARACTER_FLAG_UNSET(target, flag) target & ~flag
 
 	using RegexpFlags = unsigned int;
 
@@ -73,9 +73,12 @@ namespace RE
 		REGFL_ALLFLAGS	= REGFL_NEGATED | REGFL_NOFLAGS
 	};
 
+#define REGEXP_FLAG_SET(target, flag) target | flag
+
 	namespace Constants
 	{
-		constexpr unsigned int nUnicodeDigits = 4; // minimum number of Unicode code point digits after '\u'
+		constexpr unsigned int minUnicodeDigits = 4; // minimum number of Unicode code point digits after '\u'
+		constexpr unsigned int maxUnicodeDigits = 6; // maximum number of Unicode code point digits after '\u'
 
 		enum class ClosureType : unsigned char {
 			NOTYPE,

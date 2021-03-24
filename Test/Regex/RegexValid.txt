@@ -3,10 +3,13 @@ abcdef
 (a)
 (abcdef)
 a(bcde)f
+a(b)
+(b)c
 a|b
 a|b|c|d
 a|(bcde)|f
 a|(bc|de)|f
+qwerty|asdfgh
 a+
 ab*
 ab?
@@ -25,6 +28,7 @@ abc+
 a(b|c)?(de)+f*
 ab{0,2}
 ab(0,2)
+a?b?c{0,1}[^efgh]{0,}[ij]{0,5}k
 a\nb
 a\v
 a\f
@@ -45,6 +49,9 @@ abTcd|efTgh
 abRSTUVcd|efRSTUVgh
 (ab|ef)RSTUV(cd|gh)
 a[bc]
+a[bbbbbb\b\bbb\cc\cc]
+a[\t\n\v\f\r\0\[\]\-\^\a\b\c\d\abcd\{\}\*\+\?\(\)\|{}*+?()|]
+^[^\b\t\n\v\f\r\0\[\]\-\^\x\y\z\xyz\{\}\*\+\?\(\)\|{}*+?()|Аヰ𝓒𝓥𝓧𝓩􊪪]-
 [bc]
 [bc]+
 a[b-e]

@@ -131,6 +131,10 @@ namespace RegexTest
 		RegexMatchTest("RegexMatch_003.txt");
 	}
 
+	TEST(RegexpTest, RegexMatch004) {
+		RegexMatchTest("RegexMatch_004.txt");
+	}
+
 	///----------------------------------------------------------------------------------------------------
 
 	std::basic_istream<char32_t>& operator>>(std::basic_istream<char32_t>& is, RegexVector& rvector)

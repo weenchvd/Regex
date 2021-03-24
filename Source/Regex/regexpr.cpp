@@ -656,14 +656,14 @@ namespace RE
 #if REGEX_PRINT_FA_STATE
 	void Regexp::MakeDFA()
 	{
-		std::cout << std::endl << "RE: " << this->source << std::endl;
+		std::cout << std::endl << "RE: " << GetGlyph(this->source) << std::endl;
 		REtoNFA();
 		PrintNFA(std::cout, *this);
 		std::vector<DFAnode*> nodes = NFAtoDFA();
-		std::cout << std::endl << "RE: " << this->source << std::endl;
+		std::cout << std::endl << "RE: " << GetGlyph(this->source) << std::endl;
 		PrintDFA(std::cout, *this);
 		MinimizeDFA(nodes);
-		std::cout << std::endl << "RE: " << this->source << std::endl;
+		std::cout << std::endl << "RE: " << GetGlyph(this->source) << std::endl;
 		PrintDFA(std::cout, *this);
 		SetFlags();
 	}
@@ -801,7 +801,7 @@ namespace RE
 	{
 		for (const Character ch : alphabet) {
 			if (ch & CHARFL_NEGATED) {
-				fl |= REGFL_NEGATED;
+				fl = REGEXP_FLAG_SET(fl, REGFL_NEGATED);
 				break;
 			}
 		}
@@ -997,8 +997,8 @@ namespace RE
 	void RE::Regexp::CheckRange(Character firstC, Character lastC)
 	{
 		constexpr size_t qty = 3;
-		firstC = CHARACTER_FLAG_ERASE(firstC, CHARFL_ALLFLAGS);
-		lastC = CHARACTER_FLAG_ERASE(lastC, CHARFL_ALLFLAGS);
+		firstC = CHARACTER_FLAG_UNSET(firstC, CHARFL_ALLFLAGS);
+		lastC = CHARACTER_FLAG_UNSET(lastC, CHARFL_ALLFLAGS);
 		if (firstC >= lastC) {
 			ThrowInvalidRegex(ts.GetPosition(), ts.GetSubstring(qty));
 		}
@@ -1345,7 +1345,7 @@ namespace RE
 
 	std::string GetGlyph(const Character ch, bool withQuotes)
 	{
-		const Character c = CHARACTER_FLAG_ERASE(ch, CHARFL_ALLFLAGS);
+		const Character c = CHARACTER_FLAG_UNSET(ch, CHARFL_ALLFLAGS);
 		std::string s;
 		if (ch & CHARFL_NEGATED) {
 			s += LIT_CARET;
@@ -1368,8 +1368,8 @@ namespace RE
 		}
 		else {
 			std::ostringstream oss;
-			oss << std::hex << std::uppercase << std::setfill('0') << std::setw(Constants::nUnicodeDigits)
-				<< static_cast<size_t>(ch);
+			oss << std::hex << std::uppercase << std::setfill('0') << std::setw(Constants::minUnicodeDigits)
+				<< static_cast<size_t>(c);
 			s += "\\u";
 			s += oss.str();
 			return s;
@@ -1414,8 +1414,8 @@ namespace RE
 		const std::string start{ "START" };
 		const std::string to{ "->" };							// transition mark
 		const std::string ns{ "#" };							// number sign
-		const std::string eps{ "Eps" };							// Epsilon mark
-		const size_t nLetters{ 5 };								// number of letters
+		const std::string eps{ "Epsilon" };						// Epsilon mark
+		const size_t nLetters{ Constants::maxUnicodeDigits + 3 }; // number of letters
 		const size_t cw1{ sp.size() + ((accept.size() > start.size()) ? accept.size() : start.size()) + sp.size() }; // column width 1
 		const size_t cw2{ sizeof(NFAnode*) * 2 }; // column width 2
 		const size_t cw3{ sp.size() + ns.size() + nDigits + sp.size() }; // column width 3
@@ -1518,7 +1518,7 @@ namespace RE
 		const std::string start{ "START" };
 		const std::string to{ "->" };							// transition mark
 		const std::string ns{ "#" };							// number sign
-		const size_t nLetters{ 5 };								// number of letters
+		const size_t nLetters{ Constants::maxUnicodeDigits + 3 }; // number of letters
 		const size_t cw1{ sp.size() + ((accept.size() > start.size()) ? accept.size() : start.size()) + sp.size() }; // column width 1
 		const size_t cw2{ sizeof(DFAnode*) * 2 }; // column width 2
 		const size_t cw3{ sp.size() + ns.size() + nDigits + sp.size() }; // column width 3

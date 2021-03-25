@@ -1,3 +1,9 @@
+
+// Copyright (c) 2021 Vitaly Dikov
+// 
+// Distributed under the Boost Software License, Version 1.0.
+// (See accompanying file LICENSE or copy at https://www.boost.org/LICENSE_1_0.txt)
+
 #include<iostream>
 #include<iomanip>
 #include<string>
@@ -7,40 +13,40 @@
 
 namespace Error
 {
-	const std::string prefixLevel{ "\t[ " };
-	const std::string suffixLevel{ " ] " };
-	const std::vector<std::string> level
-	{
-		{ "EXCEPTION" },
-		{ "ERROR" },
-		{ "WARNING" },
-		{ "NOTICE" }
-	};
+    const std::string prefixLevel{ "\t[ " };
+    const std::string suffixLevel{ " ] " };
+    const std::vector<std::string> level
+    {
+        { "EXCEPTION" },
+        { "ERROR" },
+        { "WARNING" },
+        { "NOTICE" }
+    };
 
-	const std::vector<std::string> type
-	{
-		{ "Standard library exception" },
-		{ "Runtime error" },
-		{ "Can't open input file" },
-		{ "Can't open output file" }
-	};
+    const std::vector<std::string> type
+    {
+        { "Standard library exception" },
+        { "Runtime error" },
+        { "Can't open input file" },
+        { "Can't open output file" }
+    };
 
-	void ErrPrint(std::ostream& os, Level errLevel, const std::string& message)
-	{
-		os << std::endl << prefixLevel << level[int(errLevel)] << suffixLevel << message << std::endl;
-	}
+    void ErrPrint(std::ostream& os, Level errLevel, const std::string& message)
+    {
+        os << std::endl << prefixLevel << level[int(errLevel)] << suffixLevel << message << std::endl;
+    }
 
-	void ErrPrint(std::ostream& os, Level errLevel, Type errType)
-	{
-		os << std::endl << prefixLevel << level[int(errLevel)] << suffixLevel << type[int(errType)] << std::endl;
-	}
+    void ErrPrint(std::ostream& os, Level errLevel, Type errType)
+    {
+        os << std::endl << prefixLevel << level[int(errLevel)] << suffixLevel << type[int(errType)] << std::endl;
+    }
 
-	void ErrPrint(std::ostream& os, Level errLevel, Type errType, const std::string& message)
-	{
-		os << std::endl << prefixLevel << level[int(errLevel)] << suffixLevel << type[int(errType)];
-		if (message.size() > 0) {
-			os << ". " << message;
-		}
-		os << std::endl;
-	}
+    void ErrPrint(std::ostream& os, Level errLevel, Type errType, const std::string& message)
+    {
+        os << std::endl << prefixLevel << level[int(errLevel)] << suffixLevel << type[int(errType)];
+        if (message.size() > 0) {
+            os << ". " << message;
+        }
+        os << std::endl;
+    }
 }

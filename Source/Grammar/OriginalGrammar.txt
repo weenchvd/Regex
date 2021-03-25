@@ -1,32 +1,32 @@
 // Next line in order separated by a space: 'marker NT' 'marker derived' 'terminal extension suffix' 'empty string token (Epsilon-production)' 'END OF FILE token'
 ## $$ ' EMPTYSTRING EOF
-## Goal					$$ Alternation
-## Alternation			$$ Alternation | Concatenation
-						$$ Concatenation
-## Concatenation		$$ Concatenation Term
-						$$ Term
-## Term					$$ Block Closure
-## Block				$$ ( Alternation )
-						$$ [ CharacterClass ]
-						$$ Atom
-## CharacterClass		$$ Negation CharacterClassRange
-## Negation				$$ ^
-						$$ EMPTYSTRING
-## CharacterClassRange	$$ CharacterClassRange - Atom
-						$$ CharacterClassRange Atom
-						$$ Atom
-## Atom					$$ \ Escape
-						$$ LITERAL
-## Escape				$$ ESCAPE
-						$$ SPECIAL
-						$$ LITERAL
-## Closure				$$ *
-						$$ +
-						$$ ?
-						$$ { Count }
-						$$ EMPTYSTRING
-## Count				$$ INTEGER CountMore
-## CountMore			$$ , Max
-						$$ EMPTYSTRING
-## Max					$$ INTEGER
-						$$ EMPTYSTRING
+## Goal                 $$ Alternation
+## Alternation          $$ Alternation | Concatenation
+                        $$ Concatenation
+## Concatenation        $$ Concatenation Term
+                        $$ Term
+## Term                 $$ Block Closure
+## Block                $$ ( Alternation )
+                        $$ [ CharacterClass ]
+                        $$ Atom
+## CharacterClass       $$ Negation CharacterClassRange
+## Negation             $$ ^
+                        $$ EMPTYSTRING
+## CharacterClassRange  $$ CharacterClassRange - Atom
+                        $$ CharacterClassRange Atom
+                        $$ Atom
+## Atom                 $$ \ Escape
+                        $$ LITERAL
+## Escape               $$ ESCAPE
+                        $$ SPECIAL
+                        $$ LITERAL
+## Closure              $$ *
+                        $$ +
+                        $$ ?
+                        $$ { Count }
+                        $$ EMPTYSTRING
+## Count                $$ INTEGER CountMore
+## CountMore            $$ , Max
+                        $$ EMPTYSTRING
+## Max                  $$ INTEGER
+                        $$ EMPTYSTRING

@@ -659,6 +659,37 @@ namespace RE
         return transitions;
     }
 
+    inline bool Regexp::IsNewLineSymbol(const Character ch) const
+    {
+        switch (ch) {
+        case CTRL_NEWLINE:
+        case CTRL_CRETURN:
+        case CTRL_LS:
+        case CTRL_PS:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    inline void Regexp::AdjustPositions(
+        std::u32string::const_iterator begin,
+        std::u32string::const_iterator end,
+        size_t& line,
+        size_t& pos) const
+    {
+        while (begin != end) {
+            if (IsNewLineSymbol(*begin)) {
+                ++line;
+                pos = 1;
+            }
+            else {
+                ++pos;
+            }
+            ++begin;
+        }
+    }
+
 #if REGEX_PRINT_FA_STATE
     void Regexp::MakeDFA()
     {
@@ -1331,6 +1362,79 @@ namespace RE
             }
         }
         return false;
+    }
+
+    std::vector<MatchResults> Regexp::Search(const REstring& string)
+    {
+        std::vector<MatchResults> results;
+        size_t line = 1;                    // line number
+        size_t pos = 1;                     // position in line
+        REstring::const_iterator iter = string.cbegin();
+        if (fl & REGFL_NEGATED) {
+            while (iter != string.cend()) {
+                Character ch = *iter;
+                std::vector<DFAnode*> cur{ {dfa.first} };
+                cur = TakeStepThroughDFA(cur, ch);
+                if (cur.size() == 0) {
+                    AdjustPositions(iter, iter + 1, line, pos);
+                    ++iter;
+                    continue;
+                }
+                MatchResults mr{ line, pos, iter, iter };
+                while (cur.size() != 0) {
+                    for (DFAnode* p : cur) {
+                        if (p->acc) {
+                            mr.str.second = iter + 1;
+                            break;
+                        }
+                    }
+                    if (++iter == string.cend()) {
+                        break;
+                    }
+                    ch = *iter;
+                    cur = TakeStepThroughDFA(cur, ch);
+                }
+                if (mr.str.second == mr.str.first) {
+                    iter = mr.str.first + 1;
+                }
+                else {
+                    iter = mr.str.second;
+                    results.push_back(mr);
+                }
+                AdjustPositions(mr.str.first, iter, line, pos);
+            }
+        }
+        else {
+            while (iter != string.cend()) {
+                Character ch = *iter;
+                DFAnode* cur = TakeStepThroughDFA(dfa.first, ch);
+                if (cur == nullptr) {
+                    AdjustPositions(iter, iter + 1, line, pos);
+                    ++iter;
+                    continue;
+                }
+                MatchResults mr{ line, pos, iter, iter };
+                while (cur != nullptr) {
+                    if (cur->acc) {
+                        mr.str.second = iter + 1;
+                    }
+                    if (++iter == string.cend()) {
+                        break;
+                    }
+                    ch = *iter;
+                    cur = TakeStepThroughDFA(cur, ch);
+                }
+                if (mr.str.second == mr.str.first) {
+                    iter = mr.str.first + 1;
+                }
+                else {
+                    iter = mr.str.second;
+                    results.push_back(mr);
+                }
+                AdjustPositions(mr.str.first, iter, line, pos);
+            }
+        }
+        return results;
     }
 
     void Regexp::PutRE(const REstring& string)

@@ -15,16 +15,20 @@
 
 namespace RE
 {
-    enum ControlCharacter : unsigned char {
+    using Character = unsigned int;
+
+    enum ControlCharacter : Character {
         CTRL_NULL       = '\0',
         CTRL_BACKSPACE  = '\b',
         CTRL_HTAB       = '\t',
         CTRL_NEWLINE    = '\n',
         CTRL_VTAB       = '\v',
         CTRL_FORMFEED   = '\f',
-        CTRL_CRETURN    = '\r'
+        CTRL_CRETURN    = '\r',
+        CTRL_LS         = 0x2028,
+        CTRL_PS         = 0x2029
     };
-    
+
     enum EscapeCharacter : unsigned char {
         ESC_NULL        = '0',
         ESC_B           = 'b',
@@ -56,7 +60,6 @@ namespace RE
         LIT_CARET       = '^'
     };
 
-    using Character = unsigned int;
     using Index = size_t;
     using Number = size_t;
     using CharacterFlags = Character;
@@ -246,6 +249,20 @@ namespace RE
     using SetPartition = std::vector<std::vector<DFAnode*>>;
     constexpr size_t ringBufferSize = 4;
 
+    struct MatchResults {
+        using LineNumber     = size_t;
+        using PositionInLine = size_t;
+        using Matched        = std::pair<std::u32string::const_iterator, std::u32string::const_iterator>;
+        
+        LineNumber ln;
+        PositionInLine pos;
+        Matched str;
+
+        MatchResults(size_t lineNumber, size_t positionInLine,
+            std::u32string::const_iterator begin, std::u32string::const_iterator end)
+            : ln{ lineNumber }, pos{ positionInLine }, str{ begin, end } {}
+    };
+
     class Regexp {
         class TokenStream {
         public:
@@ -346,6 +363,14 @@ namespace RE
             std::vector<DFAnode*>& currentState,
             const Character ch) const;
 
+        bool IsNewLineSymbol(const Character ch) const;
+
+        void AdjustPositions(
+            std::u32string::const_iterator begin,
+            std::u32string::const_iterator end,
+            size_t& line,
+            size_t& pos) const;
+
         // nonconst members
         void NextToken(const bool beginSubstring = true) { ts.Advance(beginSubstring); token = ts.GetToken(); }
         void AddToAlphabet(const Character ch) { alphabetTemp.emplace(ch); }
@@ -391,6 +416,7 @@ namespace RE
 
         // const members
         bool Match(const REstring& string);
+        std::vector<MatchResults> Search(const REstring& string);
 
         // nonconst members
         void PutRE(const REstring& string);

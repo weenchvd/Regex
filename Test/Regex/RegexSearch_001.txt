@@ -1,0 +1,61 @@
+// Comment (it is ignored). This file must be in UTF-8 encoding. Separators: 'border' (the border separator must be used in pairs), 'prefix'. The separators must be different. 1 space must follow any leading separator (it is ignored). The separator must only contain 1 symbol. The separator must not occur in any expression. Next line in order separated by a space: 'search text borders' 'RE prefix' 'prefix of the number of matches' 'borders of valid match' 'line number and character number borders where the previous valid match occurred'.
+@ # $ % &
+
+@ According to Merriam-Webster's Medical Dictionary,
+pneumonoultramicroscopicsilicovolcanoconiosis is a
+pneumoconiosis caused by inhalation of very fine
+silicate or quartz dust.@
+# [A-Za-z]i[A-Za-z]
+$ 15
+% din% & 1 6&
+% ria% & 1 17&
+% dic% & 1 34&
+% Dic% & 1 40&
+% tio% & 1 43&
+% mic% & 2 14&
+% pic% & 2 22&
+% sil% & 2 25&
+% nio% & 2 40&
+% sis% & 2 43&
+% nio% & 3 9&
+% sis% & 3 12&
+% tio% & 3 32&
+% fin% & 3 45&
+% sil% & 4 1&
+
+@ According to Merriam-Webster's Medical Dictionary,
+pneumonoultramicroscopicsilicovolcanoconiosis is a
+pneumoconiosis caused by inhalation of very fine
+silicate or quartz dust.@
+# [A-Za-z]io[A-Za-z]
+$ 4
+% tion% & 1 43&
+% nios% & 2 40&
+% nios% & 3 9&
+% tion% & 3 32&
+
+@ According to Merriam-Webster's Medical Dictionary,
+pneumonoultramicroscopicsilicovolcanoconiosis is a
+pneumoconiosis caused by inhalation of very fine
+silicate or quartz dust.@
+# [^DdMmNnSsTt]i[^ \n]+
+$ 6
+% riam-Webster's% & 1 17&
+% picsilicovolcanoconiosis% & 2 22&
+%  is% & 2 46&
+%  inhalation% & 3 25&
+% fine% & 3 45&
+% licate% & 4 3&
+
+@ According to Merriam-Webster's Medical Dictionary,
+pneumonoultramicroscopicsilicovolcanoconiosis is a
+pneumoconiosis caused by inhalation of very fine
+silicate or quartz dust.@
+# [^DdMmNnSsTt]i[^ ]+
+$ 5
+% riam-Webster's% & 1 17&
+% picsilicovolcanoconiosis% & 2 22&
+%  is% & 2 46&
+%  inhalation% & 3 25&
+% fine
+silicate% & 3 45&

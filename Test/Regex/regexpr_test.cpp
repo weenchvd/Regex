@@ -141,7 +141,32 @@ namespace RegexTest
         RegexMatchTest("RegexMatch_004.txt");
     }
 
+    TEST(RegexpTest, RegexSearch001) {
+        RegexSearchTest("RegexSearch_001.txt");
+    }
+
     ///----------------------------------------------------------------------------------------------------
+
+    std::basic_string<char32_t> ToChar(unsigned int x)
+    {
+        std::ostringstream oss;
+        oss << x;
+        std::basic_string<char32_t> s;
+        for (char ch : oss.str()) {
+            s += char32_t(ch);
+        }
+        return s;
+    }
+
+    void ToUInt(const std::basic_string<char32_t>& source, unsigned int& x)
+    {
+        std::string s;
+        for (char32_t ch : source) {
+            s += char(ch);
+        }
+        std::istringstream iss{ s };
+        iss >> x;
+    }
 
     std::basic_istream<char32_t>& operator>>(std::basic_istream<char32_t>& is, RegexVector& rvector)
     {
@@ -232,6 +257,126 @@ namespace RegexTest
         return is;
     }
 
+    std::basic_istream<char32_t>& operator>>(std::basic_istream<char32_t>& is, RegexSearch& rsearch)
+    {
+        is.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // first line is comment, skip it
+        RE::REstring secondLine;            // line of symbols
+        getline(is, secondLine);
+        if (!is) return is;
+        RE::REstring b_text;                // border
+        RE::REstring p_RE;                  // prefix
+        RE::REstring p_nMatches;            // prefix
+        RE::REstring b_validMatch;          // border
+        RE::REstring b_LCNumbers;           // border
+        std::basic_istringstream<char32_t> iss{ secondLine };
+        iss >> b_text >> p_RE >> p_nMatches >> b_validMatch >> b_LCNumbers;
+        if (!iss) {
+            is.setstate(std::ios_base::failbit);
+            return is;
+        }
+        InputBuffer ibuff;
+        RegexSearch rs;
+        while (is) {
+            RegexSearchCase rscase;
+            RE::REstring separator;
+            if (ibuff) {
+                separator = ibuff.buf;
+                ibuff.full = false;
+            }
+            else {
+                is >> separator;
+                if (!is) return is;
+            }
+            // get 'text'
+            if (separator != b_text) {
+                is.setstate(std::ios_base::failbit);
+                return is;
+            }
+            is.get();
+            getline(is, rscase.text, separator[0]);
+            if (!is) {
+                is.setstate(std::ios_base::failbit);
+                return is;
+            }
+            // get 're'
+            is >> separator;
+            if (!is || separator != p_RE) {
+                is.setstate(std::ios_base::failbit);
+                return is;
+            }
+            is.get();
+            getline(is, rscase.re);
+            if (!is) {
+                is.setstate(std::ios_base::failbit);
+                return is;
+            }
+            // get 'nMatches'
+            is >> separator;
+            if (!is || separator != p_nMatches) {
+                is.setstate(std::ios_base::failbit);
+                return is;
+            }
+            is.get();
+            /*is >> rscase.nMatches;*/
+            { std::basic_string<char32_t> temp; is >> temp; ToUInt(temp, rscase.nMatches); }
+            if (!is) {
+                is.setstate(std::ios_base::failbit);
+                return is;
+            }
+            while (true) {
+                is >> separator;
+                if (!is) {
+                    if (is.eof()) break;
+                    else return is;
+                }
+                if (separator != b_validMatch) {
+                    if (separator == b_text) {
+                        ibuff.buf = separator;
+                        ibuff.full = true;
+                        break;
+                    }
+                    is.setstate(std::ios_base::failbit);
+                    return is;
+                }
+                rscase.valid.push_back(RE::REstring{});
+                rscase.lineNumber.push_back(0);
+                rscase.charNumber.push_back(0);
+                // get 'valid'
+                is.get();
+                getline(is, rscase.valid[rscase.valid.size() - 1], separator[0]);
+                if (!is) {
+                    is.setstate(std::ios_base::failbit);
+                    return is;
+                }
+                // get 'lineNumber' and 'charNumber'
+                is >> separator;
+                if (!is || separator != b_LCNumbers) {
+                    is.setstate(std::ios_base::failbit);
+                    return is;
+                }
+                is.get();
+                /*is >> rscase.lineNumber[rscase.lineNumber.size() - 1]
+                    >> rscase.charNumber[rscase.charNumber.size() - 1];*/
+                { std::basic_string<char32_t> temp; is >> temp;
+                    ToUInt(temp, rscase.lineNumber[rscase.lineNumber.size() - 1]); }
+                { std::basic_string<char32_t> temp; getline(is, temp, separator[0]); is.unget();
+                    ToUInt(temp, rscase.charNumber[rscase.charNumber.size() - 1]); }
+                if (!is) {
+                    is.setstate(std::ios_base::failbit);
+                    return is;
+                }
+                is >> separator;
+                if (!is || separator != b_LCNumbers) {
+                    is.setstate(std::ios_base::failbit);
+                    return is;
+                }
+            }
+            rs.vec.push_back(rscase);
+        }
+        rsearch = rs;
+        return is;
+    }
+
     std::ostream& operator<<(std::ostream& os, const RegexMatch& rmatch)
     {
         std::string sp{ "  " };
@@ -270,12 +415,77 @@ namespace RegexTest
         return os;
     }
 
+    std::basic_ostream<char32_t>& operator<<(std::basic_ostream<char32_t>& os, const RegexSearchCase& rscase)
+    {
+        std::basic_string<char32_t> sp{ U"  " };
+        os << sp << U"RegexSearchCase.text:" << std::endl << rscase.text << std::endl;
+        os << sp << U"RegexSearchCase.re: " << rscase.re << std::endl;
+        os << sp << U"RegexSearchCase.nMatches: " << /*rscase.nMatches*/ ToChar(rscase.nMatches) << std::endl;
+        for (size_t i = 0; i < rscase.valid.size(); ++i) {
+            os << sp + sp << U"RegexSearchCase.valid[" << /*i*/ ToChar(i) << U"]: " << rscase.valid[i] << std::endl;
+            os << sp + sp << U"RegexSearchCase.lineNumber[" << /*i*/ ToChar(i) << U"]: "
+                << /*rscase.lineNumber[i]*/ ToChar(rscase.lineNumber[i]) << std::endl;
+            os << sp + sp << U"RegexSearchCase.charNumber[" << /*i*/ ToChar(i) << U"]: "
+                << /*rscase.charNumber[i]*/ ToChar(rscase.charNumber[i]) << std::endl;
+        }
+        return os;
+    }
+
+    std::basic_ostream<char32_t>& operator<<(std::basic_ostream<char32_t>& os, const RE::MatchResults& results)
+    {
+        std::basic_string<char32_t> sp{ U"  " };
+        os << sp + sp << U"MatchResults.str: "
+            << std::basic_string<char32_t>{ results.str.first, results.str.second } << std::endl;
+        os << sp + sp << U"MatchResults.ln: " << /*results.ln*/ ToChar(results.ln) << std::endl;
+        os << sp + sp << U"MatchResults.pos: " << /*results.pos*/ ToChar(results.pos) << std::endl;
+        return os;
+    }
+
     inline void PrintNumberOfTests(std::ostream& os, const size_t n)
     {
         os << "               Number of subtests in this test: " << n << std::endl;
     }
 
-    void RegexMatchTest(const std::string fileName)
+    std::string ErrorReport(const std::string& fileName, const RegexSearchCase& rscase)
+    {
+        std::string reportFileName{ "ErrorReport_" };
+        reportFileName += fileName;
+        std::locale loc(std::locale(), new std::codecvt_utf8<char32_t>);
+        std::basic_ofstream<char32_t> ofs{ reportFileName, std::ofstream::out | std::ofstream::app };
+        if (!ofs) {
+            Error::ErrPrint(std::cerr, Error::Level::ERROR, Error::Type::OUTFILE,
+                "ErrorReport(). File: " + reportFileName);
+            return std::string{};
+        }
+        ofs.imbue(loc);
+        ofs << U"RegexSearchCase" << std::endl;
+        ofs << rscase << std::endl;
+        return reportFileName;
+    }
+
+    std::string ErrorReport(const std::string& fileName, const RegexSearchCase& rscase,
+        const std::vector<RE::MatchResults>& results)
+    {
+        std::string reportFileName{ "ErrorReport_" };
+        reportFileName += fileName;
+        std::locale loc(std::locale(), new std::codecvt_utf8<char32_t>);
+        std::basic_ofstream<char32_t> ofs{ reportFileName, std::ofstream::out | std::ofstream::app };
+        if (!ofs) {
+            Error::ErrPrint(std::cerr, Error::Level::ERROR, Error::Type::OUTFILE,
+                "ErrorReport(). File: " + reportFileName);
+            return std::string{};
+        }
+        ofs.imbue(loc);
+        ofs << U"MatchResults" << std::endl;
+        for (size_t i = 0; i < results.size(); ++i) {
+            ofs << U"  MatchResults[" << /*i*/ ToChar(i) << U"]:" << std::endl << results[i] << std::endl;
+        }
+        ofs << U"RegexSearchCase" << std::endl;
+        ofs << rscase << std::endl;
+        return reportFileName;
+    }
+
+    void RegexMatchTest(const std::string& fileName)
     {
         INIT_COUNTER;
         std::locale loc(std::locale(), new std::codecvt_utf8<char32_t>);
@@ -288,11 +498,11 @@ namespace RegexTest
         for (const RegexMatchCase& rmcase : rmatch.vec) {
             try {
                 RE::Regexp re{ rmcase.re }; COUNT;
-                for (const RE::REstring rs : rmcase.valid) {
+                for (const RE::REstring& rs : rmcase.valid) {
                     EXPECT_TRUE(re.Match(rs)) << "File: " << fileName << std::endl
                         << "rs: " << RE::GetGlyph(rs) << std::endl << rmcase; COUNT;
                 }
-                for (const RE::REstring rs : rmcase.invalid) {
+                for (const RE::REstring& rs : rmcase.invalid) {
                     EXPECT_FALSE(re.Match(rs)) << "File: " << fileName << std::endl
                         << "rs: " << RE::GetGlyph(rs) << std::endl << rmcase; COUNT;
                 }
@@ -304,6 +514,56 @@ namespace RegexTest
             catch (...) {
                 std::cout << rmcase;
                 FAIL() << "File: " << fileName << std::endl << "Someone threw an exception";
+            }
+        }
+        PRINT_COUNTER;
+    }
+
+    void RegexSearchTest(const std::string& fileName)
+    {
+        INIT_COUNTER;
+        std::locale loc(std::locale(), new std::codecvt_utf8<char32_t>);
+        std::basic_ifstream<char32_t> ifs{ fileName };
+        ASSERT_TRUE(ifs) << "File: " << fileName;
+        ifs.imbue(loc);
+        RegexSearch rsearch;
+        ifs >> rsearch;
+        ASSERT_TRUE(ifs.eof()) << "File: " << fileName;
+        for (const RegexSearchCase& rscase : rsearch.vec) {
+            try {
+                RE::Regexp re{ rscase.re }; COUNT;
+                std::vector<RE::MatchResults> results{ re.Search(rscase.text) };
+                int condition{ 1 };
+                condition &= (results.size() == rscase.nMatches ? 1 : 0);
+                EXPECT_TRUE(results.size() == rscase.nMatches); COUNT;
+                for (const RE::MatchResults& mr : results) {
+                    RE::REstring match{ mr.str.first, mr.str.second };
+                    bool found{ false };
+                    size_t index{ 0 };
+                    for (size_t i = 0; i < rscase.valid.size(); ++i) {
+                        if (match == rscase.valid[i] && mr.ln == rscase.lineNumber[i]
+                            && mr.pos == rscase.charNumber[i]) {
+                            found = true;
+                            index = i;
+                            break;
+                        }
+                    }
+                    condition &= (found ? 1 : 0);
+                    EXPECT_TRUE(found); COUNT;
+                }
+                if (!condition) {
+                    std::cout << "Error report file: " << ErrorReport(fileName, rscase, results) << std::endl;
+                }
+            }
+            catch (const Error::InvalidRegex& e) {
+                FAIL() << "Ctor threw 'InvalidRegex' exception" << std::endl
+                    << "File: " << fileName << std::endl
+                    << "Error report file: " << ErrorReport(fileName, rscase);
+            }
+            catch (...) {
+                FAIL() << "Someone threw an exception" << std::endl
+                    << "File: " << fileName << std::endl
+                    << "Error report file: " << ErrorReport(fileName, rscase);
             }
         }
         PRINT_COUNTER;

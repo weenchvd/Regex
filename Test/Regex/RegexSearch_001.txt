@@ -59,3 +59,38 @@ $ 5
 %  inhalation% & 3 25&
 % fine
 silicate% & 3 45&
+
+@ According to Merriam-Webster's Medical Dictionary,
+pneumonoultramicroscopicsilicovolcanoconiosis is a
+pneumoconiosis caused by inhalation of very fine
+silicate or quartz dust.@
+# [^A-Za-z][A-Za-z]i[A-Za-z]i[A-Za-z]*
+$ 1
+% 
+silicate% & 3 49&
+
+@ According to Merriam-Webster's Medical Dictionary,
+pneumonoultramicroscopicsilicovolcanoconiosis is a
+pneumoconiosis caused by inhalation of very fine
+silicate or quartz dust.@
+# [A-Z][a-z]*i[a-z]{2}i[a-z]*
+$ 1
+% Dictionary% & 1 40&
+
+@ According to Merriam-Webster's Medical Dictionary,
+pneumonoultramicroscopicsilicovolcanoconiosis is a
+pneumoconiosis caused by inhalation of very fine
+silicate or quartz dust.@
+# [^ \n]{15,}
+$ 2
+% Merriam-Webster's% & 1 14&
+% pneumonoultramicroscopicsilicovolcanoconiosis% & 2 1&
+
+@ According to Merriam-Webster's Medical Dictionary,
+pneumonoultramicroscopicsilicovolcanoconiosis is a
+pneumoconiosis caused by inhalation of very fine
+silicate or quartz dust.@
+# [A-Za-z\-]{15,}
+$ 2
+% Merriam-Webster% & 1 14&
+% pneumonoultramicroscopicsilicovolcanoconiosis% & 2 1&

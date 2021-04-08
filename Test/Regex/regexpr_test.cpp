@@ -16,6 +16,7 @@
 #include<algorithm>
 #include<memory>
 #include<cctype>
+#include<cstdio>
 #include<limits>
 #include<locale>
 #include<codecvt>
@@ -143,6 +144,10 @@ namespace RegexTest
 
     TEST(RegexpTest, RegexSearch001) {
         RegexSearchTest("RegexSearch_001.txt");
+    }
+
+    TEST(RegexpTest, RegexSearch002) {
+        RegexSearchTest("RegexSearch_002.txt");
     }
 
     ///----------------------------------------------------------------------------------------------------
@@ -446,10 +451,8 @@ namespace RegexTest
         os << "               Number of subtests in this test: " << n << std::endl;
     }
 
-    std::string ErrorReport(const std::string& fileName, const RegexSearchCase& rscase)
+    const std::string& ErrorReport(const std::string& reportFileName, const RegexSearchCase& rscase)
     {
-        std::string reportFileName{ "ErrorReport_" };
-        reportFileName += fileName;
         std::locale loc(std::locale(), new std::codecvt_utf8<char32_t>);
         std::basic_ofstream<char32_t> ofs{ reportFileName, std::ofstream::out | std::ofstream::app };
         if (!ofs) {
@@ -463,11 +466,9 @@ namespace RegexTest
         return reportFileName;
     }
 
-    std::string ErrorReport(const std::string& fileName, const RegexSearchCase& rscase,
+    const std::string& ErrorReport(const std::string& reportFileName, const RegexSearchCase& rscase,
         const std::vector<RE::MatchResults>& results)
     {
-        std::string reportFileName{ "ErrorReport_" };
-        reportFileName += fileName;
         std::locale loc(std::locale(), new std::codecvt_utf8<char32_t>);
         std::basic_ofstream<char32_t> ofs{ reportFileName, std::ofstream::out | std::ofstream::app };
         if (!ofs) {
@@ -522,6 +523,8 @@ namespace RegexTest
     void RegexSearchTest(const std::string& fileName)
     {
         INIT_COUNTER;
+        const std::string reportFileName{ "ErrorReport_" + fileName };
+        std::remove(reportFileName.c_str());
         std::locale loc(std::locale(), new std::codecvt_utf8<char32_t>);
         std::basic_ifstream<char32_t> ifs{ fileName };
         ASSERT_TRUE(ifs) << "File: " << fileName;
@@ -536,15 +539,13 @@ namespace RegexTest
                 int condition{ 1 };
                 condition &= (results.size() == rscase.nMatches ? 1 : 0);
                 EXPECT_TRUE(results.size() == rscase.nMatches); COUNT;
-                for (const RE::MatchResults& mr : results) {
-                    RE::REstring match{ mr.str.first, mr.str.second };
+                for (size_t i = 0; i < rscase.valid.size(); ++i) {
                     bool found{ false };
-                    size_t index{ 0 };
-                    for (size_t i = 0; i < rscase.valid.size(); ++i) {
-                        if (match == rscase.valid[i] && mr.ln == rscase.lineNumber[i]
+                    for (const RE::MatchResults& mr : results) {
+                        if (RE::REstring{ mr.str.first, mr.str.second } == rscase.valid[i]
+                            && mr.ln == rscase.lineNumber[i]
                             && mr.pos == rscase.charNumber[i]) {
                             found = true;
-                            index = i;
                             break;
                         }
                     }
@@ -552,18 +553,18 @@ namespace RegexTest
                     EXPECT_TRUE(found); COUNT;
                 }
                 if (!condition) {
-                    std::cout << "Error report file: " << ErrorReport(fileName, rscase, results) << std::endl;
+                    std::cout << "Error report file: " << ErrorReport(reportFileName, rscase, results) << std::endl;
                 }
             }
             catch (const Error::InvalidRegex& e) {
                 FAIL() << "Ctor threw 'InvalidRegex' exception" << std::endl
                     << "File: " << fileName << std::endl
-                    << "Error report file: " << ErrorReport(fileName, rscase);
+                    << "Error report file: " << ErrorReport(reportFileName, rscase);
             }
             catch (...) {
                 FAIL() << "Someone threw an exception" << std::endl
                     << "File: " << fileName << std::endl
-                    << "Error report file: " << ErrorReport(fileName, rscase);
+                    << "Error report file: " << ErrorReport(reportFileName, rscase);
             }
         }
         PRINT_COUNTER;

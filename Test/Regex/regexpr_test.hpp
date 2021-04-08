@@ -55,8 +55,8 @@ namespace RegexTest
     std::basic_ostream<char32_t>& operator<<(std::basic_ostream<char32_t>& os, const RE::MatchResults& results);
 
     inline void PrintNumberOfTests(std::ostream& os, const size_t n);
-    std::string ErrorReport(const std::string& fileName, const RegexSearchCase& rscase);
-    std::string ErrorReport(const std::string& fileName, const RegexSearchCase& rscase,
+    const std::string& ErrorReport(const std::string& reportFileName, const RegexSearchCase& rscase);
+    const std::string& ErrorReport(const std::string& reportFileName, const RegexSearchCase& rscase,
         const std::vector<RE::MatchResults>& results);
     void RegexMatchTest(const std::string& fileName);
     void RegexSearchTest(const std::string& fileName);

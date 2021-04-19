@@ -29,7 +29,7 @@ namespace RegexTest
         unsigned int nMatches;
         std::vector<RE::REstring> valid;
         std::vector<unsigned int> lineNumber;
-        std::vector<unsigned int> charNumber;
+        std::vector<unsigned int> posInLine;
     };
 
     struct RegexSearch {
@@ -37,7 +37,7 @@ namespace RegexTest
     };
 
     struct InputBuffer {
-        RE::REstring buf;
+        RE::REstring str;
         bool full;
 
         InputBuffer()
@@ -46,18 +46,32 @@ namespace RegexTest
         operator bool() { return full; }
     };
 
+    extern const char32_t* dl;              // dash line
+
     std::basic_istream<char32_t>& operator>>(std::basic_istream<char32_t>& is, RegexVector& rvector);
     std::basic_istream<char32_t>& operator>>(std::basic_istream<char32_t>& is, RegexMatch& rmatch);
     std::basic_istream<char32_t>& operator>>(std::basic_istream<char32_t>& is, RegexSearch& rsearch);
-    std::ostream& operator<<(std::ostream& os, const RegexMatch& rmatch);
-    std::ostream& operator<<(std::ostream& os, const RegexMatchCase& rmcase);
+    std::basic_ostream<char32_t>& operator<<(std::basic_ostream<char32_t>& os, const RegexVector& rvector);
+    std::basic_ostream<char32_t>& operator<<(std::basic_ostream<char32_t>& os, const RegexMatchCase& rmcase);
     std::basic_ostream<char32_t>& operator<<(std::basic_ostream<char32_t>& os, const RegexSearchCase& rscase);
     std::basic_ostream<char32_t>& operator<<(std::basic_ostream<char32_t>& os, const RE::MatchResults& results);
 
     inline void PrintNumberOfTests(std::ostream& os, const size_t n);
-    const std::string& ErrorReport(const std::string& reportFileName, const RegexSearchCase& rscase);
-    const std::string& ErrorReport(const std::string& reportFileName, const RegexSearchCase& rscase,
-        const std::vector<RE::MatchResults>& results);
+
+    void ErrorReport(const std::string& reportFileName, const RegexVector& rvector,
+        const RE::REstring& errorList);
+
+    void ErrorReport(const std::string& reportFileName, const RegexMatchCase& rmcase,
+        const RE::REstring& errorList);
+
+    void ErrorReport(const std::string& reportFileName, const RegexSearchCase& rscase,
+        const RE::REstring& errorList);
+
+    void ErrorReport(const std::string& reportFileName, const RegexSearchCase& rscase,
+        const std::vector<RE::MatchResults>& results, const RE::REstring& errorList);
+
+    void RegexValidTest(const std::string& fileName);
+    void RegexInvalidTest(const std::string& fileName);
     void RegexMatchTest(const std::string& fileName);
     void RegexSearchTest(const std::string& fileName);
 }

@@ -1,4 +1,4 @@
-// Comment (it is ignored). This file must be in UTF-8 encoding. Separators: 'border' (the border separator must be used in pairs), 'prefix'. The separators must be different. 1 space must follow any leading separator (it is ignored). The separator must only contain 1 symbol. The separator must not occur in any expression. Next line in order separated by a space: 'search text borders' 'RE prefix' 'prefix of the number of matches' 'borders of valid match' 'line number and character number borders where the previous valid match occurred'.
+// Comment (it is ignored). This file must be in UTF-8 encoding. Separators: 'border' (the border separator must be used in pairs), 'prefix'. The separators must be different. 1 space or newline character must follow any separator (it is ignored). The separator must only contain 1 symbol. The separator must not occur in any expression. Next line in order separated by a space: 'search text borders' 'RE prefix' 'prefix of the number of matches' 'borders of valid match' 'borders of the line number and the character position in the line where the previous valid match occurred'.
 @ # $ % &
 
 @ 〄〄𡗓𡗓𡗔𡗔𡗔𡗔𡘃𡘃

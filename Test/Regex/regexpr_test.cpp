@@ -413,7 +413,7 @@ namespace RegexTest
 
     inline void PrintNumberOfTests(std::ostream& os, const size_t n)
     {
-        os << "               Number of subtests in this test: " << n << std::endl;
+        os << "               Number of passed subtests in this test: " << n << std::endl;
     }
 
     void ErrorReport(const std::string& reportFileName, const RegexVector& rvector,
@@ -499,9 +499,11 @@ namespace RegexTest
         bool printReport{ false };
         std::basic_ostringstream<char32_t> oss;
         for (size_t i = 0; i < valid.vec.size(); ++i) {
+            const bool noException{ true };
+            const bool exception{ true };
+            bool fail{ false };
             try {
-                COUNT; RE::Regexp re{ valid.vec[i] };
-                bool noException{ true };
+                RE::Regexp re{ valid.vec[i] }; COUNT;
                 EXPECT_TRUE(noException);
             }
             catch (const Error::InvalidRegex& e) {
@@ -509,7 +511,7 @@ namespace RegexTest
                     << U"\" }. Expect: No exception. Actual: Ctor threw 'InvalidRegex' exception" << std::endl
                     << U"      Case --> RegexVector.vec[" << /*i*/ ToChar(i) << U"]" << std::endl;
                 printReport = true;
-                bool exception{ true };
+                fail = true;
                 EXPECT_FALSE(exception);
             }
             catch (...) {
@@ -517,8 +519,40 @@ namespace RegexTest
                     << U"\" }. Expect: No exception. Actual: Someone threw an exception" << std::endl
                     << U"      Case --> RegexVector.vec[" << /*i*/ ToChar(i) << U"]" << std::endl;
                 printReport = true;
-                bool exception{ true };
+                fail = true;
                 EXPECT_FALSE(exception);
+            }
+            try {
+                RE::Regexp re{ RE::REstring{'a'} }; COUNT;
+                re.PutRE(valid.vec[i]);
+                EXPECT_TRUE(noException);
+            }
+            catch (const Error::InvalidRegex& e) {
+                oss << U">>> Error: RE::Regexp.PutRE(\"" << valid.vec[i]
+                    << U"\"). Expect: No exception. Actual: Ctor threw 'InvalidRegex' exception" << std::endl
+                    << U"      Case --> RegexVector.vec[" << /*i*/ ToChar(i) << U"]" << std::endl;
+                printReport = true;
+                fail = true;
+                EXPECT_FALSE(exception);
+            }
+            catch (...) {
+                oss << U">>> Error: RE::Regexp.PutRE(\"" << valid.vec[i]
+                    << U"\"). Expect: No exception. Actual: Someone threw an exception" << std::endl
+                    << U"      Case --> RegexVector.vec[" << /*i*/ ToChar(i) << U"]" << std::endl;
+                printReport = true;
+                fail = true;
+                EXPECT_FALSE(exception);
+            }
+            if (!fail) {
+                RE::Regexp re1{ valid.vec[i] };
+                RE::Regexp re2{ RE::REstring{'a'} };
+                re2.PutRE(valid.vec[i]);
+                const bool equal{ re1 == re2 };
+                EXPECT_TRUE(equal); COUNT;
+                if (!equal) {
+                    printReport = true;
+                    oss << U">>> Error: re1 == re2. Expect: true. Actual: false" << std::endl;
+                }
             }
         }
         if (printReport) {
@@ -543,17 +577,17 @@ namespace RegexTest
         bool printReport{ false };
         std::basic_ostringstream<char32_t> oss;
         for (size_t i = 0; i < invalid.vec.size(); ++i) {
+            const bool noException{ true };
+            const bool exception{ true };
             try {
-                COUNT; RE::Regexp re{ invalid.vec[i] };
+                RE::Regexp re{ invalid.vec[i] }; COUNT;
                 oss << U">>> Error: RE::Regexp{ \"" << invalid.vec[i]
                     << U"\" }. Expect: InvalidRegex exception. Actual: No exception" << std::endl
                     << U"      Case --> RegexVector.vec[" << /*i*/ ToChar(i) << U"]" << std::endl;
                 printReport = true;
-                bool noException{ true };
                 EXPECT_FALSE(noException);
             }
             catch (const Error::InvalidRegex& e) {
-                bool exception{ true };
                 EXPECT_TRUE(exception);
             }
             catch (...) {
@@ -561,7 +595,25 @@ namespace RegexTest
                     << U"\" }. Expect: InvalidRegex exception. Actual: Someone threw an exception" << std::endl
                     << U"      Case --> RegexVector.vec[" << /*i*/ ToChar(i) << U"]" << std::endl;
                 printReport = true;
-                bool exception{ true };
+                EXPECT_FALSE(exception);
+            }
+            try {
+                RE::Regexp re{ RE::REstring{'a'} }; COUNT;
+                re.PutRE(invalid.vec[i]);
+                oss << U">>> Error: RE::Regexp.PutRE(\"" << invalid.vec[i]
+                    << U"\"). Expect: InvalidRegex exception. Actual: No exception" << std::endl
+                    << U"      Case --> RegexVector.vec[" << /*i*/ ToChar(i) << U"]" << std::endl;
+                printReport = true;
+                EXPECT_FALSE(noException);
+            }
+            catch (const Error::InvalidRegex& e) {
+                EXPECT_TRUE(exception);
+            }
+            catch (...) {
+                oss << U">>> Error: RE::Regexp.PutRE(\"" << invalid.vec[i]
+                    << U"\"). Expect: InvalidRegex exception. Actual: Someone threw an exception" << std::endl
+                    << U"      Case --> RegexVector.vec[" << /*i*/ ToChar(i) << U"]" << std::endl;
+                printReport = true;
                 EXPECT_FALSE(exception);
             }
         }
@@ -590,12 +642,16 @@ namespace RegexTest
             std::basic_ostringstream<char32_t> oss;
             oss << U"RegexMatchCase #" << /*i + 1*/ ToChar(i + 1) << std::endl << std::endl;
             try {
-                COUNT; RE::Regexp re{ rmcase.re };
+                RE::Regexp re1{ rmcase.re }; COUNT;
+                RE::Regexp re2{ RE::REstring{'a'} };
+                re2.PutRE(rmcase.re); COUNT;
                 bool printReport{ false };
                 for (size_t j = 0; j < rmcase.valid.size(); ++j) {
-                    bool match{ re.Match(rmcase.valid[j]) };
-                    EXPECT_TRUE(match); COUNT;
-                    if (!match) {
+                    const bool match1{ re1.Match(rmcase.valid[j]) };
+                    EXPECT_TRUE(match1); COUNT;
+                    const bool match2{ re2.Match(rmcase.valid[j]) };
+                    EXPECT_TRUE(match2); COUNT;
+                    if (!match1 || !match2) {
                         printReport = true;
                         oss << U">>> Error: Regexp::Match(\"" << rmcase.valid[j]
                             << U"\"). Expect: true. Actual: false" << std::endl
@@ -603,9 +659,11 @@ namespace RegexTest
                     }
                 }
                 for (size_t j = 0; j < rmcase.invalid.size(); ++j) {
-                    bool match{ re.Match(rmcase.invalid[j]) };
-                    EXPECT_FALSE(match); COUNT;
-                    if (match) {
+                    const bool match1{ re1.Match(rmcase.invalid[j]) };
+                    EXPECT_FALSE(match1); COUNT;
+                    const bool match2{ re2.Match(rmcase.invalid[j]) };
+                    EXPECT_FALSE(match2); COUNT;
+                    if (match1 || match2) {
                         printReport = true;
                         oss << U">>> Error: Regexp::Match(\"" << rmcase.invalid[j]
                             << U"\"). Expect: false. Actual: true" << std::endl
@@ -654,9 +712,17 @@ namespace RegexTest
             std::basic_ostringstream<char32_t> oss;
             oss << U"RegexSearchCase #" << /*i + 1*/ ToChar(i + 1) << std::endl << std::endl;
             try {
-                COUNT; RE::Regexp re{ rscase.re };
-                std::vector<RE::MatchResults> results{ re.Search(rscase.text) };
+                RE::Regexp re1{ rscase.re }; COUNT;
+                RE::Regexp re2{ RE::REstring{'a'} };
+                re2.PutRE(rscase.re); COUNT;
                 bool printReport{ false };
+                const bool equal{ re1 == re2 };
+                EXPECT_TRUE(equal); COUNT;
+                if (!equal) {
+                    printReport = true;
+                    oss << U">>> Error: re1 == re2. Expect: true. Actual: false" << std::endl;
+                }
+                std::vector<RE::MatchResults> results{ re1.Search(rscase.text) };
                 bool sizes{ results.size() == rscase.nMatches };
                 EXPECT_TRUE(sizes); COUNT;
                 if (!sizes) {

@@ -376,6 +376,43 @@ namespace RE
         return p;
     }
 
+    bool operator==(const DFA& left, const DFA& right)
+    {
+        if (left.sz != right.sz) {
+            return false;
+        }
+        if (left.first == nullptr && right.first == nullptr) {
+            return true;
+        }
+        std::set<const DFAnode*> visited;
+        if (left.first == nullptr || right.first == nullptr || !Equal(left.first, right.first, visited)) {
+            return false;
+        }
+        return true;
+    }
+
+    bool Equal(const DFAnode* left, const DFAnode* right, std::set<const DFAnode*>& visited)
+    {
+        visited.emplace(left);
+        if (left->acc != right->acc || left->mark != right->mark) {
+            return false;
+        }
+        if (left->trans.size() != right->trans.size()) {
+            return false;
+        }
+        for (size_t i = 0; i < left->trans.size(); ++i) {
+            if (left->trans[i].first != right->trans[i].first) {
+                return false;
+            }
+            if (visited.find(left->trans[i].second) == visited.end()) {
+                if (!Equal(left->trans[i].second, right->trans[i].second, visited)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     DFA::~DFA()
     {
         if (sz > 0) {
@@ -1451,6 +1488,16 @@ namespace RE
         last = CHARFL_NOTCHAR;
         fl = REGFL_NOFLAGS;
         MakeDFA();
+    }
+
+    bool operator==(const Regexp& left, const Regexp& right)
+    {
+        return (left.source == right.source && left.dfa == right.dfa && left.fl == right.fl);
+    }
+
+    bool operator!=(const Regexp& left, const Regexp& right)
+    {
+        return !(left == right);
     }
 
     std::string GetGlyph(const Character ch, bool withQuotes)

@@ -215,6 +215,8 @@ namespace RE
 
         // friends
         friend class Regexp;
+        friend bool operator==(const DFA& left, const DFA& right);
+        friend bool Equal(const DFAnode* left, const DFAnode* right, std::set<const DFAnode*>& visited);
 #if REGEX_PRINT_FA_STATE
         friend void PrintDFA(std::ostream& os, const RE::Regexp& re);
 #endif // REGEX_PRINT_FA_STATE
@@ -422,6 +424,8 @@ namespace RE
         void PutRE(const REstring& string);
 
         // friends
+        friend bool operator==(const Regexp& left, const Regexp& right);
+        friend bool operator!=(const Regexp& left, const Regexp& right);
 #if REGEX_PRINT_FA_STATE
         friend void PrintNFA(std::ostream& os, const RE::Regexp& re);
         friend void PrintDFA(std::ostream& os, const RE::Regexp& re);

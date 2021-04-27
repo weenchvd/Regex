@@ -486,6 +486,7 @@ namespace RE
         case SPEC_RPAR:
         case SPEC_STAR:
         case SPEC_PLUS:
+        case SPEC_DOT:
         case SPEC_QUESTION:
         case SPEC_LBRACKET:
         case SPEC_BSLASH:
@@ -699,8 +700,8 @@ namespace RE
     inline bool Regexp::IsNewLineSymbol(const Character ch) const
     {
         switch (ch) {
-        case CTRL_NEWLINE:
-        case CTRL_CRETURN:
+        case CTRL_LF:
+        case CTRL_CR:
         case CTRL_LS:
         case CTRL_PS:
             return true;
@@ -1086,6 +1087,19 @@ namespace RE
             break;
         case Regexp::TokenStream::TokenType::SPECIAL:
             switch (token.first) {
+            case SPEC_DOT:
+                if (type == Constants::AtomType::CHARCLASS) {
+                    last = token.first; // TODO CHARACTER_FLAG_SET
+                    last |= flags;
+                    NextToken();
+                    AddToAlphabet(last);
+                    return NFA{ last };
+                }
+                else if (type == Constants::AtomType::STANDART) {
+                    NextToken();
+                    return PNotNewline();
+                }
+                break;
             case SPEC_BSLASH:
                 NextToken(false);
                 return PEscape(flags, type);
@@ -1114,6 +1128,24 @@ namespace RE
             break;
         }
         ThrowInvalidRegex(ts.GetPosition());
+    }
+
+    // parse '.' (dot)
+    NFA RE::Regexp::PNotNewline()
+    {
+        RE::Character lf = CHARACTER_FLAG_SET(CTRL_LF, CHARFL_NEGATED);
+        RE::Character cr = CHARACTER_FLAG_SET(CTRL_CR, CHARFL_NEGATED);
+        RE::Character ls = CHARACTER_FLAG_SET(CTRL_LS, CHARFL_NEGATED);
+        RE::Character ps = CHARACTER_FLAG_SET(CTRL_PS, CHARFL_NEGATED);
+        AddToAlphabet(lf);
+        AddToAlphabet(cr);
+        AddToAlphabet(ls);
+        AddToAlphabet(ps);
+        NFA a{ lf };
+        a.Alternate(NFA{ cr });
+        a.Alternate(NFA{ ls });
+        a.Alternate(NFA{ ps });
+        return a;
     }
 
     // parse Escape
@@ -1149,29 +1181,29 @@ namespace RE
     bool RE::Regexp::PIsEscape(Character& ch, const Constants::AtomType type)
     {
         switch (token.first) {
-        case ESC_NULL:
+        case ESC_0:
             ch = CTRL_NULL;
             return true;
         case ESC_B:
             if (type == Constants::AtomType::CHARCLASS) {
-                ch = CTRL_BACKSPACE;
+                ch = CTRL_BS;
                 return true;
             }
             return false;
-        case ESC_HTAB:
-            ch = CTRL_HTAB;
+        case ESC_T:
+            ch = CTRL_TAB;
             return true;
-        case ESC_NEWLINE:
-            ch = CTRL_NEWLINE;
+        case ESC_N:
+            ch = CTRL_LF;
             return true;
-        case ESC_VTAB:
-            ch = CTRL_VTAB;
+        case ESC_V:
+            ch = CTRL_VT;
             return true;
-        case ESC_FORMFEED:
-            ch = CTRL_FORMFEED;
+        case ESC_F:
+            ch = CTRL_FF;
             return true;
-        case ESC_CRETURN:
-            ch = CTRL_CRETURN;
+        case ESC_R:
+            ch = CTRL_CR;
             return true;
         default:
             return false;
@@ -1218,6 +1250,7 @@ namespace RE
             }
             case SPEC_LPAR:
             case SPEC_RPAR:
+            case SPEC_DOT:
             case SPEC_LBRACKET:
             case SPEC_BSLASH:
             case SPEC_BAR:

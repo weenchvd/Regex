@@ -1,0 +1,20 @@
+// Comment (it is ignored). This file must be in UTF-8 encoding. Separators: 'border' (the border separator must be used in pairs), 'prefix'. The separators must be different. 1 space or newline character must follow any separator (it is ignored). The separator must only contain 1 symbol. The separator must not occur in any expression. Next line in order separated by a space: 'RE prefix' 'borders of valid match' 'borders of invalid match'.
+# $ %
+
+# a.b
+$ axb$
+$ a b$
+$ aab$
+$ abb$
+$ a!b$
+$ a,b$
+$ a-b$
+$ a`b$
+$ a	b$
+% a
+b%
+% a
+b%
+% ab%
+% a b%
+% a b%

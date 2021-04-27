@@ -19,24 +19,24 @@ namespace RE
 
     enum ControlCharacter : Character {
         CTRL_NULL       = '\0',
-        CTRL_BACKSPACE  = '\b',
-        CTRL_HTAB       = '\t',
-        CTRL_NEWLINE    = '\n',
-        CTRL_VTAB       = '\v',
-        CTRL_FORMFEED   = '\f',
-        CTRL_CRETURN    = '\r',
+        CTRL_BS         = '\b',
+        CTRL_TAB        = '\t',
+        CTRL_LF         = '\n',
+        CTRL_VT         = '\v',
+        CTRL_FF         = '\f',
+        CTRL_CR         = '\r',
         CTRL_LS         = 0x2028,
         CTRL_PS         = 0x2029
     };
 
     enum EscapeCharacter : unsigned char {
-        ESC_NULL        = '0',
+        ESC_0           = '0',
         ESC_B           = 'b',
-        ESC_HTAB        = 't',
-        ESC_NEWLINE     = 'n',
-        ESC_VTAB        = 'v',
-        ESC_FORMFEED    = 'f',
-        ESC_CRETURN     = 'r',
+        ESC_T           = 't',
+        ESC_N           = 'n',
+        ESC_V           = 'v',
+        ESC_F           = 'f',
+        ESC_R           = 'r',
     };
 
     // SpecialCharacters must not match EscapeCharacters
@@ -45,6 +45,7 @@ namespace RE
         SPEC_RPAR       = ')',
         SPEC_STAR       = '*',
         SPEC_PLUS       = '+',
+        SPEC_DOT        = '.',
         SPEC_QUESTION   = '?',
         SPEC_LBRACKET   = '[',
         SPEC_BSLASH     = '\\',
@@ -398,6 +399,7 @@ namespace RE
          NFA PAtom(
                 const CharacterFlags flags = CHARFL_NOFLAGS,
                 const Constants::AtomType type = Constants::AtomType::STANDART);
+         NFA PNotNewline();
          NFA PEscape(const CharacterFlags flags, const Constants::AtomType type);
         bool PIsEscape(Character& ch, const Constants::AtomType type);
         void PClosure(NFA& a);

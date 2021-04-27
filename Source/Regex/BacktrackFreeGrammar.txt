@@ -19,6 +19,7 @@
                                   $$ Atom CharacterClassRange'
                                   $$ EMPTYSTRING
 ## Atom                           $$ \ Escape
+                                  $$ .
                                   $$ LITERAL
 ## Escape                         $$ ESCAPE
                                   $$ SPECIAL
@@ -37,25 +38,26 @@
 
 FIRST(EMPTYSTRING): EMPTYSTRING
 FIRST(EOF): EOF
-FIRST(Goal): ( [ \ LITERAL
-FIRST(Alternation): ( [ \ LITERAL
+FIRST(Goal): ( [ \ . LITERAL
+FIRST(Alternation): ( [ \ . LITERAL
 FIRST(|): |
-FIRST(Concatenation): ( [ \ LITERAL
-FIRST(Term): ( [ \ LITERAL
-FIRST(Block): ( [ \ LITERAL
+FIRST(Concatenation): ( [ \ . LITERAL
+FIRST(Term): ( [ \ . LITERAL
+FIRST(Block): ( [ \ . LITERAL
 FIRST(Closure): * + ? { EMPTYSTRING
 FIRST((): (
 FIRST()): )
 FIRST([): [
-FIRST(CharacterClass): ^ \ LITERAL
+FIRST(CharacterClass): ^ \ . LITERAL
 FIRST(]): ]
-FIRST(Atom): \ LITERAL
+FIRST(Atom): \ . LITERAL
 FIRST(Negation): ^ EMPTYSTRING
-FIRST(CharacterClassRange): \ LITERAL
+FIRST(CharacterClassRange): \ . LITERAL
 FIRST(^): ^
 FIRST(-): -
 FIRST(\): \
 FIRST(Escape): ESCAPE SPECIAL LITERAL
+FIRST(.): .
 FIRST(LITERAL): LITERAL
 FIRST(ESCAPE): ESCAPE
 FIRST(SPECIAL): SPECIAL
@@ -70,21 +72,21 @@ FIRST(CountMore): , EMPTYSTRING
 FIRST(,): ,
 FIRST(Max): INTEGER EMPTYSTRING
 FIRST(Alternation'): | EMPTYSTRING
-FIRST(Concatenation'): EMPTYSTRING ( [ \ LITERAL
-FIRST(CharacterClassRange'): - EMPTYSTRING \ LITERAL
+FIRST(Concatenation'): EMPTYSTRING ( [ \ . LITERAL
+FIRST(CharacterClassRange'): - EMPTYSTRING \ . LITERAL
 
 
 FOLLOW(Goal): EOF
 FOLLOW(Alternation): ) EOF
 FOLLOW(Concatenation): | ) EOF
-FOLLOW(Term): | ( [ \ LITERAL ) EOF
-FOLLOW(Block): | ( [ \ LITERAL * + ? { ) EOF
-FOLLOW(Closure): | ( [ \ LITERAL ) EOF
+FOLLOW(Term): | ( [ \ . LITERAL ) EOF
+FOLLOW(Block): | ( [ \ . LITERAL * + ? { ) EOF
+FOLLOW(Closure): | ( [ \ . LITERAL ) EOF
 FOLLOW(CharacterClass): ] EOF
-FOLLOW(Atom): | ( [ \ LITERAL * + ? { ] - ) EOF
-FOLLOW(Negation): \ LITERAL EOF
+FOLLOW(Atom): | ( [ \ . LITERAL * + ? { ] - ) EOF
+FOLLOW(Negation): \ . LITERAL EOF
 FOLLOW(CharacterClassRange): ] EOF
-FOLLOW(Escape): | ( [ \ LITERAL * + ? { ] - ) EOF
+FOLLOW(Escape): | ( [ \ . LITERAL * + ? { ] - ) EOF
 FOLLOW(Count): } EOF
 FOLLOW(CountMore): } EOF
 FOLLOW(Max): } EOF
@@ -93,25 +95,26 @@ FOLLOW(Concatenation'): | ) EOF
 FOLLOW(CharacterClassRange'): ] EOF
 
 
-FIRST+(Goal -> Alternation): ( [ \ LITERAL
-FIRST+(Alternation -> Concatenation Alternation'): ( [ \ LITERAL
+FIRST+(Goal -> Alternation): ( [ \ . LITERAL
+FIRST+(Alternation -> Concatenation Alternation'): ( [ \ . LITERAL
 FIRST+(Alternation' -> | Concatenation Alternation'): |
 FIRST+(Alternation' -> EMPTYSTRING): EMPTYSTRING ) EOF
-FIRST+(Concatenation -> Term Concatenation'): ( [ \ LITERAL
-FIRST+(Concatenation' -> Term Concatenation'): ( [ \ LITERAL
+FIRST+(Concatenation -> Term Concatenation'): ( [ \ . LITERAL
+FIRST+(Concatenation' -> Term Concatenation'): ( [ \ . LITERAL
 FIRST+(Concatenation' -> EMPTYSTRING): EMPTYSTRING | ) EOF
-FIRST+(Term -> Block Closure): ( [ \ LITERAL
+FIRST+(Term -> Block Closure): ( [ \ . LITERAL
 FIRST+(Block -> ( Alternation )): (
 FIRST+(Block -> [ CharacterClass ]): [
-FIRST+(Block -> Atom): \ LITERAL
-FIRST+(CharacterClass -> Negation CharacterClassRange): ^ EMPTYSTRING \ LITERAL ] EOF
+FIRST+(Block -> Atom): \ . LITERAL
+FIRST+(CharacterClass -> Negation CharacterClassRange): ^ EMPTYSTRING \ . LITERAL ] EOF
 FIRST+(Negation -> ^): ^
-FIRST+(Negation -> EMPTYSTRING): EMPTYSTRING \ LITERAL EOF
-FIRST+(CharacterClassRange -> Atom CharacterClassRange'): \ LITERAL
+FIRST+(Negation -> EMPTYSTRING): EMPTYSTRING \ . LITERAL EOF
+FIRST+(CharacterClassRange -> Atom CharacterClassRange'): \ . LITERAL
 FIRST+(CharacterClassRange' -> - Atom CharacterClassRange'): -
-FIRST+(CharacterClassRange' -> Atom CharacterClassRange'): \ LITERAL
+FIRST+(CharacterClassRange' -> Atom CharacterClassRange'): \ . LITERAL
 FIRST+(CharacterClassRange' -> EMPTYSTRING): EMPTYSTRING ] EOF
 FIRST+(Atom -> \ Escape): \
+FIRST+(Atom -> .): .
 FIRST+(Atom -> LITERAL): LITERAL
 FIRST+(Escape -> ESCAPE): ESCAPE
 FIRST+(Escape -> SPECIAL): SPECIAL
@@ -120,7 +123,7 @@ FIRST+(Closure -> *): *
 FIRST+(Closure -> +): +
 FIRST+(Closure -> ?): ?
 FIRST+(Closure -> { Count }): {
-FIRST+(Closure -> EMPTYSTRING): EMPTYSTRING | ( [ \ LITERAL ) EOF
+FIRST+(Closure -> EMPTYSTRING): EMPTYSTRING | ( [ \ . LITERAL ) EOF
 FIRST+(Count -> INTEGER CountMore): INTEGER
 FIRST+(CountMore -> , Max): ,
 FIRST+(CountMore -> EMPTYSTRING): EMPTYSTRING } EOF

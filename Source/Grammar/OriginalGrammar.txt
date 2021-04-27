@@ -16,6 +16,7 @@
                         $$ CharacterClassRange Atom
                         $$ Atom
 ## Atom                 $$ \ Escape
+                        $$ .
                         $$ LITERAL
 ## Escape               $$ ESCAPE
                         $$ SPECIAL

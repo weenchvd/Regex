@@ -12,36 +12,41 @@ Special pattern characters are characters (or sequences of characters) that have
 
 | characters    | description             | matches |
 | ------------- | ----------------------- | ------- |
-| `\t`          | tab (HT)                | a horizontal tab character |
-| `\n`          | newline (LF)            | a newline (line feed) character |
-| `\v`          | vertical tab (VT)       | a vertical tab character |
-| `\f`          | form feed (FF)          | a form feed character |
-| `\r`          | carriage return (CR)    | a carriage return character |
-| `\0`          | null                    | a null character |
-| `\`character  | character               | the character character as it is, without interpreting its special meaning within a regex expression. Any character can be escaped except those which form any of the special character sequences above. Needed for: `\` `*` `+` `?` `(` `)` `{` `}` `|` |
-| `[`class`]`   | character class         | the target character is part of the class (see character classes below) |
-| `[^`class`]`  | negated character class | the target character is not part of the class (see character classes below) |
+| `.`           | not newline             | any character except line terminators (LF, CR, LS, PS) |
+| `\t`          | tab (HT)                | a horizontal tab character (same as `\u0009`) |
+| `\n`          | newline (LF)            | a newline (line feed) character (same as `\u000A`) |
+| `\v`          | vertical tab (VT)       | a vertical tab character (same as `\u000B`) |
+| `\f`          | form feed (FF)          | a form feed character (same as `\u000C`) |
+| `\r`          | carriage return (CR)    | a carriage return character (same as `\u000D`) |
+| `\0`          | null                    | a null character (same as `\u0000`) |
+| `\c`*letter*  | control code            | a control code character whose code unit value is the same as the remainder of dividing the code unit value of *letter* by 32. For example: `\cA` (or `\ca`) is the same as `\u0001`, `\cB` (or `\cb`) the same as `\u0002`, and so on... Range: *A-Z* (or *a-z*) |
+| `\x`*HH*      | ASCII character         | a character whose code unit value has an hex value equivalent to the two hex digits *HH*. For example: `\x4C` (or `\x4c`) is the same as `L`, or `\x23` the same as `#`. Range: *00-7F* |
+| `\u`*HHHH*    | unicode character       | a character whose code unit value has an hex value from the Basic Multilingual Plane (BMP) equivalent to the four hex digits *HHHH*. Range: *0000-FFFF* |
+| `\U`*HHHHHH*  | unicode character       | a character whose code unit value has an hex value from the Supplementary Planes equivalent to the six hex digits *HHHHHH*. Range: *010000-10FFFF* |
+| `\`*character*| character               | the character *character* as it is, without interpreting its special meaning within a regex expression. Any *character* can be escaped except those which form any of the special character sequences above. Needed for: `\` `.` `*` `+` `?` `(` `)` `[` `]` `{` `}` `|` |
+| `[`*class*`]` | character class         | the target character is part of the class (see character classes below) |
+| `[^`*class*`]`| negated character class | the target character is not part of the class (see character classes below) |
 
 ### * Quantifiers
 Quantifiers follow a character or a special pattern character. They can modify the amount of times that character is repeated in the match:
 
-| characters    | times               | effects |
-| ------------- | ------------------- | ------- |
-| `*`           | 0 or more           | The preceding atom is matched 0 or more times |
-| `+`           | 1 or more           | The preceding atom is matched 1 or more times |
-| `?`           | 0 or 1              | The preceding atom is optional (matched either 0 times or once) |
-| `{`INT`}`     | INT                 | The preceding atom is matched exactly INT times |
-| `{`INT,`}`    | INT or more         | The preceding atom is matched INT or more times |
-| `{`MIN,MAX`}` | between MIN and MAX | The preceding atom is matched at least MIN times, but not more than MAX |
+| characters        | times                   | effects |
+| ----------------- | ----------------------- | ------- |
+| `*`               | 0 or more               | The preceding atom is matched 0 or more times |
+| `+`               | 1 or more               | The preceding atom is matched 1 or more times |
+| `?`               | 0 or 1                  | The preceding atom is optional (matched either 0 times or once) |
+| `{`*INT*`}`       | *INT*                   | The preceding atom is matched exactly *INT* times |
+| `{`*INT*,`}`      | *INT* or more           | The preceding atom is matched *INT* or more times |
+| `{`*MIN*,*MAX*`}` | between *MIN* and *MAX* | The preceding atom is matched at least *MIN* times, but not more than *MAX* |
 
 By default, all these quantifiers are greedy (i.e., they take as many characters that meet the condition as possible).
 
 ### * Groups
 Groups allow to apply quantifiers to a sequence of characters (instead of a single character):
 
-| characters        | description   | effects |
-| ----------------- | ------------- | ------- |
-| `(`subpattern`)`  | Group         | Allow to apply quantifiers to a sequence of characters |
+| characters         | description   | effects |
+| ------------------ | ------------- | ------- |
+| `(`*subpattern*`)` | Group         | Allow to apply quantifiers to a sequence of characters |
 
 
 ### * Alternatives
@@ -69,5 +74,5 @@ For example:
 `[a-z]` matches any lowercase letter (`a`, `b`, `c`, ... until `z`).
 `[abc1-5]` matches either `a`, `b` or `c`, or a digit between `1` and `5`.
 
-**Escape characters:** All escape characters described above can also be used within a character class specification. The only change is with `\b`, that here is interpreted as a backspace character.
-Notice that within a class definition, those characters that have a special meaning in the regular expression (such as `*`, `|`, `{`, `(`) don't have such a meaning and are interpreted as normal characters (so they do not need to be escaped). Instead, within a class definition, the hyphen (`-`) and the brackets (`[` and `]`) do have special meanings and they should be escaped with a backslash (`\`).
+**Escape characters:** All escape characters described above can also be used within a character class specification. The only change is with `\b`, that here is interpreted as a backspace character (`\u0008`).
+Notice that within a class definition, those characters that have a special meaning in the regular expression (such as `*`, `.`, `|`, `{`, `(`) don't have such a meaning and are interpreted as normal characters (so they do not need to be escaped). Instead, within a class definition, the hyphen (`-`) and the brackets (`[` and `]`) do have special meanings and they should be escaped with a backslash (`\`).

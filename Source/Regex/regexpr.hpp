@@ -31,12 +31,16 @@ namespace RE
 
     enum EscapeCharacter : unsigned char {
         ESC_0           = '0',
-        ESC_B           = 'b',
-        ESC_T           = 't',
-        ESC_N           = 'n',
-        ESC_V           = 'v',
-        ESC_F           = 'f',
-        ESC_R           = 'r',
+        ESC_b           = 'b',
+        ESC_t           = 't',
+        ESC_n           = 'n',
+        ESC_v           = 'v',
+        ESC_f           = 'f',
+        ESC_r           = 'r',
+        ESC_c           = 'c',
+        ESC_x           = 'x',
+        ESC_u           = 'u',
+        ESC_U           = 'U'
     };
 
     // SpecialCharacters must not match EscapeCharacters
@@ -87,8 +91,8 @@ namespace RE
 
     namespace Constants
     {
-        constexpr unsigned int minUnicodeDigits = 4; // minimum number of Unicode code point digits after '\u'
-        constexpr unsigned int maxUnicodeDigits = 6; // maximum number of Unicode code point digits after '\u'
+        constexpr int unicodeDigits_Four = 4;   // number of Unicode code point digits after '\u'
+        constexpr int unicodeDigits_Six = 6;    // number of Unicode code point digits after '\U'
 
         enum class ClosureType : unsigned char {
             NOTYPE,
@@ -102,6 +106,13 @@ namespace RE
             CHARCLASS
         };
     }
+
+    enum UnicodeCodePoint : unsigned int {
+        BASICPLANE_MIN              = 0x0000,
+        BASICPLANE_MAX              = 0xFFFF,
+        ALLSUPPLEMENTARYPLANES_MIN  = 0x010000,
+        ALLSUPPLEMENTARYPLANES_MAX  = 0x10FFFF
+    };
 
     enum ASCIIControlCharacter : unsigned char {
         ASCIICC_FIRST   = 0x00,
@@ -401,14 +412,18 @@ namespace RE
                 const Constants::AtomType type = Constants::AtomType::STANDART);
          NFA PNotNewline();
          NFA PEscape(const CharacterFlags flags, const Constants::AtomType type);
+        Character PGetControlCode();
+        Character PGetASCIICharacter();
+        Character PGetUnicodeCharacter(const int nDigits);
         bool PIsEscape(Character& ch, const Constants::AtomType type);
         void PClosure(NFA& a);
         void PCount(int& min, int& max, Constants::ClosureType& ty);
         void PCountMore(int& max, Constants::ClosureType& ty);
         void PMax(int& max, Constants::ClosureType& ty);
          int PGetInteger();
-        void ThrowInvalidRegex(const size_t position) const;
-        void ThrowInvalidRegex(const size_t position, const REstring& range) const;
+        void ThrowInvalidRegexCharacter(const size_t position) const;
+        void ThrowInvalidRegexRange(const size_t position, const REstring& range) const;
+        void ThrowInvalidRegexEscape(const size_t position, const REstring& escapeSequence) const;
         void ThrowInvalidRegex(const std::string& message) const;
     public:
         Regexp(const REstring& string);

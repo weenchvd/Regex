@@ -122,6 +122,10 @@ namespace RegexTest
         RegexMatchTest("RegexMatch_005.txt");
     }
 
+    TEST(RegexpTest, RegexMatch006) {
+        RegexMatchTest("RegexMatch_006.txt");
+    }
+
     TEST(RegexpTest, RegexSearch001) {
         RegexSearchTest("RegexSearch_001.txt");
     }

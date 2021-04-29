@@ -757,7 +757,7 @@ namespace RE
     {
         nfa = PGoal();
         if (token.second != Regexp::TokenStream::TokenType::EOS) {
-            ThrowInvalidRegex(ts.GetPosition());
+            ThrowInvalidRegexCharacter(ts.GetPosition());
         }
         CheckNFA();
         alphabet.insert(alphabet.end(), alphabetTemp.begin(), alphabetTemp.end());
@@ -920,7 +920,7 @@ namespace RE
         default:
             break;
         }
-        ThrowInvalidRegex(ts.GetPosition());
+        ThrowInvalidRegexCharacter(ts.GetPosition());
     }
 
     // parse Concatenation
@@ -958,7 +958,7 @@ namespace RE
         default:
             break;
         }
-        ThrowInvalidRegex(ts.GetPosition());
+        ThrowInvalidRegexCharacter(ts.GetPosition());
     }
 
     // parse Term
@@ -1000,7 +1000,7 @@ namespace RE
         default:
             return PAtom();
         }
-        ThrowInvalidRegex(ts.GetPosition());
+        ThrowInvalidRegexCharacter(ts.GetPosition());
     }
 
     // parse CharacterClass
@@ -1066,7 +1066,7 @@ namespace RE
         default:
             break;
         }
-        ThrowInvalidRegex(ts.GetPosition());
+        ThrowInvalidRegexCharacter(ts.GetPosition());
     }
 
     void RE::Regexp::CheckRange(Character firstC, Character lastC)
@@ -1075,7 +1075,7 @@ namespace RE
         firstC = CHARACTER_FLAG_UNSET(firstC, CHARFL_ALLFLAGS);
         lastC = CHARACTER_FLAG_UNSET(lastC, CHARFL_ALLFLAGS);
         if (firstC >= lastC) {
-            ThrowInvalidRegex(ts.GetPosition(), ts.GetSubstring(qty));
+            ThrowInvalidRegexRange(ts.GetPosition(), ts.GetSubstring(qty));
         }
     }
 
@@ -1127,7 +1127,7 @@ namespace RE
         default:
             break;
         }
-        ThrowInvalidRegex(ts.GetPosition());
+        ThrowInvalidRegexCharacter(ts.GetPosition());
     }
 
     // parse '.' (dot)
@@ -1174,7 +1174,7 @@ namespace RE
         default:
             break;
         }
-        ThrowInvalidRegex(ts.GetPosition());
+        ThrowInvalidRegexCharacter(ts.GetPosition());
     }
 
     // parse ESCAPE
@@ -1184,30 +1184,118 @@ namespace RE
         case ESC_0:
             ch = CTRL_NULL;
             return true;
-        case ESC_B:
+        case ESC_b:
             if (type == Constants::AtomType::CHARCLASS) {
                 ch = CTRL_BS;
                 return true;
             }
             return false;
-        case ESC_T:
+        case ESC_t:
             ch = CTRL_TAB;
             return true;
-        case ESC_N:
+        case ESC_n:
             ch = CTRL_LF;
             return true;
-        case ESC_V:
+        case ESC_v:
             ch = CTRL_VT;
             return true;
-        case ESC_F:
+        case ESC_f:
             ch = CTRL_FF;
             return true;
-        case ESC_R:
+        case ESC_r:
             ch = CTRL_CR;
             return true;
+        case ESC_c:
+            NextToken(false);
+            ch = PGetControlCode();
+            return true;
+        case ESC_x:
+            NextToken(false);
+            ch = PGetASCIICharacter();
+            return true;
+        case ESC_u: {
+            NextToken(false);
+            ch = PGetUnicodeCharacter(Constants::unicodeDigits_Four);
+            return true;
+        }
+        case ESC_U: {
+            NextToken(false);
+            ch = PGetUnicodeCharacter(Constants::unicodeDigits_Six);
+            return true;
+        }
         default:
             return false;
         }
+    }
+
+    // parse ESCAPE '\c'
+    Character RE::Regexp::PGetControlCode()
+    {
+        constexpr size_t qty = 1;
+        const Character ch{ token.first };
+        if (ch >= 'a' && ch <= 'z') {
+            return static_cast<Character>(static_cast<unsigned int>(ch) - ('a' - 1));
+        }
+        else if (ch >= 'A' && ch <= 'Z') {
+            return static_cast<Character>(static_cast<unsigned int>(ch) - ('A' - 1));
+        }
+        NextToken();
+        ThrowInvalidRegexEscape(ts.GetPosition(), ts.GetSubstring(qty));
+    }
+
+    // parse ESCAPE '\x'
+    Character RE::Regexp::PGetASCIICharacter()
+    {
+        constexpr size_t qty = 1;
+        const Character ch1{ token.first };
+        NextToken(false);
+        const Character ch2{ token.first };
+        if (isxdigit(ch1) && isxdigit(ch2)) {
+            std::istringstream iss{ std::string{ static_cast<char>(ch1) } + static_cast<char>(ch2) };
+            unsigned int value{ 0 };
+            iss >> std::hex >> value;
+            if (iss && value >= 0x00 && value <= 0x7F) {
+                return static_cast<Character>(value);
+            }
+        }
+        NextToken();
+        ThrowInvalidRegexEscape(ts.GetPosition(), ts.GetSubstring(qty));
+    }
+
+    // parse ESCAPE '\u' and '\U'
+    Character RE::Regexp::PGetUnicodeCharacter(const int nDigits)
+    {
+        constexpr size_t qty = 1;
+        std::string s;
+        bool valid{ true };
+        for (size_t i = 0; i < nDigits; ++i) {
+            if (isxdigit(token.first)) {
+                s += static_cast<char>(token.first);
+            }
+            else {
+                valid = false;
+            }
+            if (i < nDigits - 1) {
+                NextToken(false);
+            }
+        }
+        if (valid) {
+            std::istringstream iss{ s };
+            unsigned long long int value{ 0 };
+            iss >> std::hex >> value;
+            if (iss) {
+                if (nDigits == Constants::unicodeDigits_Four && value >= BASICPLANE_MIN
+                    && value <= BASICPLANE_MAX) {
+                    return static_cast<Character>(value);
+                }
+                else if (nDigits == Constants::unicodeDigits_Six && value >= ALLSUPPLEMENTARYPLANES_MIN
+                    && value <= ALLSUPPLEMENTARYPLANES_MAX) {
+                    return static_cast<Character>(value);
+                }
+            }
+        }
+        NextToken();
+        ThrowInvalidRegexEscape(ts.GetPosition(), ts.GetSubstring(qty));
     }
 
     // parse Closure
@@ -1264,7 +1352,7 @@ namespace RE
         default:
             break;
         }
-        ThrowInvalidRegex(ts.GetPosition());
+        ThrowInvalidRegexCharacter(ts.GetPosition());
     }
 
     // parse Count
@@ -1286,7 +1374,7 @@ namespace RE
         default:
             break;
         }
-        ThrowInvalidRegex(ts.GetPosition());
+        ThrowInvalidRegexCharacter(ts.GetPosition());
     }
 
     // parse CountMore
@@ -1317,7 +1405,7 @@ namespace RE
         default:
             break;
         }
-        ThrowInvalidRegex(ts.GetPosition());
+        ThrowInvalidRegexCharacter(ts.GetPosition());
     }
 
     // parse Max
@@ -1344,7 +1432,7 @@ namespace RE
         default:
             break;
         }
-        ThrowInvalidRegex(ts.GetPosition());
+        ThrowInvalidRegexCharacter(ts.GetPosition());
     }
 
     // parse INTEGER
@@ -1358,7 +1446,7 @@ namespace RE
         return atoi(s.c_str());
     }
 
-    void Regexp::ThrowInvalidRegex(const size_t position) const
+    void Regexp::ThrowInvalidRegexCharacter(const size_t position) const
     {
         std::string message{ "Invalid character '" };
         if (position < source.size()) {
@@ -1372,12 +1460,26 @@ namespace RE
         ThrowInvalidRegex(message);
     }
 
-    void Regexp::ThrowInvalidRegex(const size_t position, const REstring& range) const
+    void Regexp::ThrowInvalidRegexRange(const size_t position, const REstring& range) const
     {
         std::string message{ "Invalid range '" };
         message += GetGlyph(range);
         message += "' was encountered after substring '";
         message += GetGlyph(REstring{ source, 0, position - range.size() }) + "'";
+        ThrowInvalidRegex(message);
+    }
+
+    void Regexp::ThrowInvalidRegexEscape(const size_t position, const REstring& escapeSequence) const
+    {
+        std::string message{ "Invalid escape sequence '" };
+        message += GetGlyph(escapeSequence);
+        message += "' was encountered after substring '";
+        if (position > source.size()) {
+            message += GetGlyph(REstring{ source, 0, source.size() - escapeSequence.size() }) + "'";
+        }
+        else {
+            message += GetGlyph(REstring{ source, 0, position - escapeSequence.size() }) + "'";
+        }
         ThrowInvalidRegex(message);
     }
 
@@ -1541,7 +1643,7 @@ namespace RE
             s += LIT_CARET;
         }
         if (c >= ASCIICC_FIRST && c <= ASCIICC_LAST) {
-            return s + Strings::asciiCC[c];
+            return s + Strings::asciiCC[static_cast<unsigned int>(c)];
         }
         else if (c == ASCIICC_DEL) {
             return s + Strings::del;
@@ -1558,9 +1660,15 @@ namespace RE
         }
         else {
             std::ostringstream oss;
-            oss << std::hex << std::uppercase << std::setfill('0') << std::setw(Constants::minUnicodeDigits)
-                << static_cast<size_t>(c);
-            s += "\\u";
+            oss << std::hex << std::uppercase << std::setfill('0');
+            if (c >= BASICPLANE_MIN && c <= BASICPLANE_MAX) {
+                oss << std::setw(Constants::unicodeDigits_Four) << static_cast<unsigned int>(c);
+                s += "\\u";
+            }
+            else if (c >= ALLSUPPLEMENTARYPLANES_MIN && c <= ALLSUPPLEMENTARYPLANES_MAX) {
+                oss << std::setw(Constants::unicodeDigits_Six) << static_cast<unsigned int>(c);
+                s += "\\U";
+            }
             s += oss.str();
             return s;
         }
@@ -1605,7 +1713,7 @@ namespace RE
         const std::string to{ "->" };                           // transition mark
         const std::string ns{ "#" };                            // number sign
         const std::string eps{ "Epsilon" };                     // Epsilon mark
-        const size_t nLetters{ Constants::maxUnicodeDigits + 3 }; // number of letters
+        const size_t nLetters{ Constants::unicodeDigits_Six + 3 }; // number of letters
         const size_t cw1{ sp.size() + ((accept.size() > start.size()) ? accept.size() : start.size()) + sp.size() }; // column width 1
         const size_t cw2{ sizeof(NFAnode*) * 2 }; // column width 2
         const size_t cw3{ sp.size() + ns.size() + nDigits + sp.size() }; // column width 3
@@ -1708,7 +1816,7 @@ namespace RE
         const std::string start{ "START" };
         const std::string to{ "->" };                           // transition mark
         const std::string ns{ "#" };                            // number sign
-        const size_t nLetters{ Constants::maxUnicodeDigits + 3 }; // number of letters
+        const size_t nLetters{ Constants::unicodeDigits_Six + 3 }; // number of letters
         const size_t cw1{ sp.size() + ((accept.size() > start.size()) ? accept.size() : start.size()) + sp.size() }; // column width 1
         const size_t cw2{ sizeof(DFAnode*) * 2 }; // column width 2
         const size_t cw3{ sp.size() + ns.size() + nDigits + sp.size() }; // column width 3

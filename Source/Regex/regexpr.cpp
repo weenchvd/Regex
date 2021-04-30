@@ -459,9 +459,9 @@ namespace RE
 
     // 1 substring == 1 sequence of tokens from which 1 atom is created
     // qty == the quantity of last atoms for which the total substring will be obtained 
-    REstring Regexp::TokenStream::GetSubstring(const size_t qty) const
+    UString Regexp::TokenStream::GetSubstring(const size_t qty) const
     {
-        REstring s;
+        UString s;
         if (tss.size() == 0 || qty == 0) {
             return s;
         }
@@ -670,7 +670,7 @@ namespace RE
             if (node) {
                 transitions.push_back(node);
             }
-            const Character firstNegated = CHARACTER_FLAG_SET(0, CHARFL_NEGATED);
+            const Character firstNegated = FLAGS_SET(0, CHARFL_NEGATED);
             TransitionTable::const_iterator itBeg =
                 std::lower_bound(p->trans.begin(), p->trans.end(), firstNegated, LessTransitionCharacter{});
             if (itBeg != p->trans.end()) {
@@ -682,7 +682,7 @@ namespace RE
                     ++it;
                 }
                 std::sort(negated.begin(), negated.end());
-                DFAnode* excluded = const_cast<DFAnode*>(FindTransition(p, CHARACTER_FLAG_SET(ch, CHARFL_NEGATED)));
+                DFAnode* excluded = const_cast<DFAnode*>(FindTransition(p, FLAGS_SET(ch, CHARFL_NEGATED)));
                 DFAnode* prev = nullptr;
                 for (DFAnode* cur : negated) {
                     if (prev != cur) {
@@ -876,7 +876,7 @@ namespace RE
     {
         for (const Character ch : alphabet) {
             if (ch & CHARFL_NEGATED) {
-                fl = REGEXP_FLAG_SET(fl, REGFL_NEGATED);
+                fl = FLAGS_SET(fl, REGFL_NEGATED);
                 break;
             }
         }
@@ -1046,13 +1046,13 @@ namespace RE
             break;
         case Regexp::TokenStream::TokenType::LITERAL:
             if (token.first == LIT_HYPHEN) {
-                const Character firstC = last;
+                const Character firstChar = last;
                 NextToken();
                 NFA b = PAtom(flags, type);
-                const Character lastC = last;
-                CheckRange(firstC, lastC);
-                Character ch = firstC;
-                while (++ch < lastC) {
+                const Character lastChar = last;
+                CheckRange(firstChar, lastChar);
+                Character ch = firstChar;
+                while (++ch < lastChar) {
                     AddToAlphabet(ch);
                     a.Alternate(NFA{ ch });
                 }
@@ -1069,12 +1069,12 @@ namespace RE
         ThrowInvalidRegexCharacter(ts.GetPosition());
     }
 
-    void RE::Regexp::CheckRange(Character firstC, Character lastC)
+    void RE::Regexp::CheckRange(Character first, Character last)
     {
         constexpr size_t qty = 3;
-        firstC = CHARACTER_FLAG_UNSET(firstC, CHARFL_ALLFLAGS);
-        lastC = CHARACTER_FLAG_UNSET(lastC, CHARFL_ALLFLAGS);
-        if (firstC >= lastC) {
+        first = FLAGS_UNSET(first, CHARFL_ALLFLAGS);
+        last = FLAGS_UNSET(last, CHARFL_ALLFLAGS);
+        if (first >= last) {
             ThrowInvalidRegexRange(ts.GetPosition(), ts.GetSubstring(qty));
         }
     }
@@ -1089,8 +1089,7 @@ namespace RE
             switch (token.first) {
             case SPEC_DOT:
                 if (type == Constants::AtomType::CHARCLASS) {
-                    last = token.first; // TODO CHARACTER_FLAG_SET
-                    last |= flags;
+                    last = FLAGS_SET(token.first, flags);
                     NextToken();
                     AddToAlphabet(last);
                     return NFA{ last };
@@ -1108,8 +1107,7 @@ namespace RE
                 break;
             default:
                 if (type == Constants::AtomType::CHARCLASS) {
-                    last = token.first;
-                    last |= flags;
+                    last = FLAGS_SET(token.first, flags);
                     NextToken();
                     AddToAlphabet(last);
                     return NFA{ last };
@@ -1118,8 +1116,7 @@ namespace RE
             }
             break;
         case Regexp::TokenStream::TokenType::LITERAL: {
-            last = token.first;
-            last |= flags;
+            last = FLAGS_SET(token.first, flags);
             NextToken();
             AddToAlphabet(last);
             return NFA{ last };
@@ -1133,10 +1130,10 @@ namespace RE
     // parse '.' (dot)
     NFA RE::Regexp::PNotNewline()
     {
-        RE::Character lf = CHARACTER_FLAG_SET(CTRL_LF, CHARFL_NEGATED);
-        RE::Character cr = CHARACTER_FLAG_SET(CTRL_CR, CHARFL_NEGATED);
-        RE::Character ls = CHARACTER_FLAG_SET(CTRL_LS, CHARFL_NEGATED);
-        RE::Character ps = CHARACTER_FLAG_SET(CTRL_PS, CHARFL_NEGATED);
+        RE::Character lf = FLAGS_SET(CTRL_LF, CHARFL_NEGATED);
+        RE::Character cr = FLAGS_SET(CTRL_CR, CHARFL_NEGATED);
+        RE::Character ls = FLAGS_SET(CTRL_LS, CHARFL_NEGATED);
+        RE::Character ps = FLAGS_SET(CTRL_PS, CHARFL_NEGATED);
         AddToAlphabet(lf);
         AddToAlphabet(cr);
         AddToAlphabet(ls);
@@ -1155,8 +1152,7 @@ namespace RE
         case Regexp::TokenStream::TokenType::EOS:
             break;
         case Regexp::TokenStream::TokenType::SPECIAL: {
-            last = token.first;
-            last |= flags;
+            last = FLAGS_SET(token.first, flags);
             NextToken();
             AddToAlphabet(last);
             return NFA{ last };
@@ -1166,7 +1162,7 @@ namespace RE
             if (!PIsEscape(last, type)) {
                 last = token.first;
             }
-            last |= flags;
+            last = FLAGS_SET(last, flags);
             NextToken();
             AddToAlphabet(last);
             return NFA{ last };
@@ -1215,12 +1211,12 @@ namespace RE
             return true;
         case ESC_u: {
             NextToken(false);
-            ch = PGetUnicodeCharacter(Constants::unicodeDigits_Four);
+            ch = PGetUnicodeCharacter(Constants::unicodeDigits_4);
             return true;
         }
         case ESC_U: {
             NextToken(false);
-            ch = PGetUnicodeCharacter(Constants::unicodeDigits_Six);
+            ch = PGetUnicodeCharacter(Constants::unicodeDigits_6);
             return true;
         }
         default:
@@ -1284,11 +1280,11 @@ namespace RE
             unsigned long long int value{ 0 };
             iss >> std::hex >> value;
             if (iss) {
-                if (nDigits == Constants::unicodeDigits_Four && value >= BASICPLANE_MIN
+                if (nDigits == Constants::unicodeDigits_4 && value >= BASICPLANE_MIN
                     && value <= BASICPLANE_MAX) {
                     return static_cast<Character>(value);
                 }
-                else if (nDigits == Constants::unicodeDigits_Six && value >= ALLSUPPLEMENTARYPLANES_MIN
+                else if (nDigits == Constants::unicodeDigits_6 && value >= ALLSUPPLEMENTARYPLANES_MIN
                     && value <= ALLSUPPLEMENTARYPLANES_MAX) {
                     return static_cast<Character>(value);
                 }
@@ -1456,29 +1452,29 @@ namespace RE
             message += Strings::eof;
         }
         message += "' was encountered after substring '";
-        message += GetGlyph(REstring{ source, 0, position }) + "'";
+        message += GetGlyph(UString{ source, 0, position }) + "'";
         ThrowInvalidRegex(message);
     }
 
-    void Regexp::ThrowInvalidRegexRange(const size_t position, const REstring& range) const
+    void Regexp::ThrowInvalidRegexRange(const size_t position, const UString& range) const
     {
         std::string message{ "Invalid range '" };
         message += GetGlyph(range);
         message += "' was encountered after substring '";
-        message += GetGlyph(REstring{ source, 0, position - range.size() }) + "'";
+        message += GetGlyph(UString{ source, 0, position - range.size() }) + "'";
         ThrowInvalidRegex(message);
     }
 
-    void Regexp::ThrowInvalidRegexEscape(const size_t position, const REstring& escapeSequence) const
+    void Regexp::ThrowInvalidRegexEscape(const size_t position, const UString& escapeSequence) const
     {
         std::string message{ "Invalid escape sequence '" };
         message += GetGlyph(escapeSequence);
         message += "' was encountered after substring '";
         if (position > source.size()) {
-            message += GetGlyph(REstring{ source, 0, source.size() - escapeSequence.size() }) + "'";
+            message += GetGlyph(UString{ source, 0, source.size() - escapeSequence.size() }) + "'";
         }
         else {
-            message += GetGlyph(REstring{ source, 0, position - escapeSequence.size() }) + "'";
+            message += GetGlyph(UString{ source, 0, position - escapeSequence.size() }) + "'";
         }
         ThrowInvalidRegex(message);
     }
@@ -1491,7 +1487,7 @@ namespace RE
         throw Error::InvalidRegex{ fullMessage };
     }
 
-    Regexp::Regexp(const REstring& string)
+    Regexp::Regexp(const UString& string)
         : source{ string }, ts{ source }, nfa{ CHARFL_NOTCHAR }, last{ CHARFL_NOTCHAR },
         fl{ REGFL_NOFLAGS }
     {
@@ -1501,7 +1497,7 @@ namespace RE
         MakeDFA();
     }
 
-    bool Regexp::Match(const REstring& string)
+    bool Regexp::Match(const UString& string)
     {
         if (fl & REGFL_NEGATED) {
             std::vector<DFAnode*>cur{ {dfa.first} };
@@ -1536,12 +1532,12 @@ namespace RE
         return false;
     }
 
-    std::vector<MatchResults> Regexp::Search(const REstring& string)
+    std::vector<MatchResults> Regexp::Search(const UString& string)
     {
         std::vector<MatchResults> results;
         size_t line = 1;                    // line number
         size_t pos = 1;                     // position in line
-        REstring::const_iterator iter = string.cbegin();
+        UString::const_iterator iter = string.cbegin();
         if (fl & REGFL_NEGATED) {
             while (iter != string.cend()) {
                 Character ch = *iter;
@@ -1609,7 +1605,7 @@ namespace RE
         return results;
     }
 
-    void Regexp::PutRE(const REstring& string)
+    void Regexp::PutRE(const UString& string)
     {
         if (string.size() == 0) {
             throw Error::InvalidRegex{ "Empty regular expression " };
@@ -1637,18 +1633,18 @@ namespace RE
 
     std::string GetGlyph(const Character ch, bool withQuotes)
     {
-        const Character c = CHARACTER_FLAG_UNSET(ch, CHARFL_ALLFLAGS);
+        const Character c = FLAGS_UNSET(ch, CHARFL_ALLFLAGS);
         std::string s;
         if (ch & CHARFL_NEGATED) {
             s += LIT_CARET;
         }
-        if (c >= ASCIICC_FIRST && c <= ASCIICC_LAST) {
+        if (c >= ASCII_CTRL_MIN && c <= ASCII_CTRL_MAX) {
             return s + Strings::asciiCC[static_cast<unsigned int>(c)];
         }
-        else if (c == ASCIICC_DEL) {
+        else if (c == ASCII_CTRL_DEL) {
             return s + Strings::del;
         }
-        else if (c > ASCIICC_LAST && c < ASCIICC_DEL) {
+        else if (c > ASCII_CTRL_MAX && c < ASCII_CTRL_DEL) {
             if (withQuotes) {
                 s += '\'';
             }
@@ -1662,11 +1658,11 @@ namespace RE
             std::ostringstream oss;
             oss << std::hex << std::uppercase << std::setfill('0');
             if (c >= BASICPLANE_MIN && c <= BASICPLANE_MAX) {
-                oss << std::setw(Constants::unicodeDigits_Four) << static_cast<unsigned int>(c);
+                oss << std::setw(Constants::unicodeDigits_4) << static_cast<unsigned int>(c);
                 s += "\\u";
             }
             else if (c >= ALLSUPPLEMENTARYPLANES_MIN && c <= ALLSUPPLEMENTARYPLANES_MAX) {
-                oss << std::setw(Constants::unicodeDigits_Six) << static_cast<unsigned int>(c);
+                oss << std::setw(Constants::unicodeDigits_6) << static_cast<unsigned int>(c);
                 s += "\\U";
             }
             s += oss.str();
@@ -1674,7 +1670,7 @@ namespace RE
         }
     }
 
-    std::string GetGlyph(const REstring& string)
+    std::string GetGlyph(const UString& string)
     {
         std::string s;
         for (RE::Character c : string) {
@@ -1713,7 +1709,7 @@ namespace RE
         const std::string to{ "->" };                           // transition mark
         const std::string ns{ "#" };                            // number sign
         const std::string eps{ "Epsilon" };                     // Epsilon mark
-        const size_t nLetters{ Constants::unicodeDigits_Six + 3 }; // number of letters
+        const size_t nLetters{ Constants::unicodeDigits_6 + 3 }; // number of letters
         const size_t cw1{ sp.size() + ((accept.size() > start.size()) ? accept.size() : start.size()) + sp.size() }; // column width 1
         const size_t cw2{ sizeof(NFAnode*) * 2 }; // column width 2
         const size_t cw3{ sp.size() + ns.size() + nDigits + sp.size() }; // column width 3
@@ -1816,7 +1812,7 @@ namespace RE
         const std::string start{ "START" };
         const std::string to{ "->" };                           // transition mark
         const std::string ns{ "#" };                            // number sign
-        const size_t nLetters{ Constants::unicodeDigits_Six + 3 }; // number of letters
+        const size_t nLetters{ Constants::unicodeDigits_6 + 3 }; // number of letters
         const size_t cw1{ sp.size() + ((accept.size() > start.size()) ? accept.size() : start.size()) + sp.size() }; // column width 1
         const size_t cw2{ sizeof(DFAnode*) * 2 }; // column width 2
         const size_t cw3{ sp.size() + ns.size() + nDigits + sp.size() }; // column width 3

@@ -10,13 +10,13 @@
 namespace RegexTest
 {
     struct RegexVector {
-        std::vector<RE::REstring> vec;
+        std::vector<RE::UString> vec;
     };
 
     struct RegexMatchCase {
-        RE::REstring re;
-        std::vector<RE::REstring> valid;
-        std::vector<RE::REstring> invalid;
+        RE::UString re;
+        std::vector<RE::UString> valid;
+        std::vector<RE::UString> invalid;
     };
 
     struct RegexMatch {
@@ -24,10 +24,10 @@ namespace RegexTest
     };
 
     struct RegexSearchCase {
-        RE::REstring text;
-        RE::REstring re;
+        RE::UString text;
+        RE::UString re;
         unsigned int nMatches;
-        std::vector<RE::REstring> valid;
+        std::vector<RE::UString> valid;
         std::vector<unsigned int> lineNumber;
         std::vector<unsigned int> posInLine;
     };
@@ -37,7 +37,7 @@ namespace RegexTest
     };
 
     struct InputBuffer {
-        RE::REstring str;
+        RE::UString str;
         bool full;
 
         InputBuffer()
@@ -59,16 +59,16 @@ namespace RegexTest
     inline void PrintNumberOfTests(std::ostream& os, const size_t n);
 
     void ErrorReport(const std::string& reportFileName, const RegexVector& rvector,
-        const RE::REstring& errorList);
+        const RE::UString& errorList);
 
     void ErrorReport(const std::string& reportFileName, const RegexMatchCase& rmcase,
-        const RE::REstring& errorList);
+        const RE::UString& errorList);
 
     void ErrorReport(const std::string& reportFileName, const RegexSearchCase& rscase,
-        const RE::REstring& errorList);
+        const RE::UString& errorList);
 
     void ErrorReport(const std::string& reportFileName, const RegexSearchCase& rscase,
-        const std::vector<RE::MatchResults>& results, const RE::REstring& errorList);
+        const std::vector<RE::MatchResults>& results, const RE::UString& errorList);
 
     void RegexValidTest(const std::string& fileName);
     void RegexInvalidTest(const std::string& fileName);

@@ -37,7 +37,7 @@ int main()
         }
         ifs.imbue(loc);
 
-        RE::REstring rs;
+        RE::UString rs;
         std::getline(ifs, rs);
         RE::Regexp regex{ rs };
 

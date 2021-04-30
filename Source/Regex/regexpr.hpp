@@ -7,6 +7,9 @@
 #ifndef REGEXPR_HPP
 #define REGEXPR_HPP
 
+#define FLAGS_SET(target, flags) target | flags
+#define FLAGS_UNSET(target, flags) target & ~flags
+
 /*
     RE - Regular Expression
     NFA - Nondeterministic Finite Automata
@@ -65,6 +68,19 @@ namespace RE
         LIT_CARET       = '^'
     };
 
+    enum UnicodeCodePointRange : unsigned int {
+        BASICPLANE_MIN = 0x0000,
+        BASICPLANE_MAX = 0xFFFF,
+        ALLSUPPLEMENTARYPLANES_MIN = 0x010000,
+        ALLSUPPLEMENTARYPLANES_MAX = 0x10FFFF
+    };
+
+    enum ASCIIRange : unsigned char {
+        ASCII_CTRL_MIN = 0x00,
+        ASCII_CTRL_MAX = 0x1F,
+        ASCII_CTRL_DEL = 0x7F
+    };
+
     using Index = size_t;
     using Number = size_t;
     using CharacterFlags = Character;
@@ -76,9 +92,6 @@ namespace RE
         CHARFL_ALLFLAGS = CHARFL_NOTCHAR | CHARFL_NEGATED | CHARFL_NOFLAGS
     };
 
-#define CHARACTER_FLAG_SET(target, flag) target | flag
-#define CHARACTER_FLAG_UNSET(target, flag) target & ~flag
-
     using RegexpFlags = unsigned int;
 
     enum RegexpFlag : RegexpFlags {
@@ -87,12 +100,10 @@ namespace RE
         REGFL_ALLFLAGS  = REGFL_NEGATED | REGFL_NOFLAGS
     };
 
-#define REGEXP_FLAG_SET(target, flag) target | flag
-
     namespace Constants
     {
-        constexpr int unicodeDigits_Four = 4;   // number of Unicode code point digits after '\u'
-        constexpr int unicodeDigits_Six = 6;    // number of Unicode code point digits after '\U'
+        constexpr int unicodeDigits_4 = 4;  // number of Unicode code point digits after '\u'
+        constexpr int unicodeDigits_6 = 6;  // number of Unicode code point digits after '\U'
 
         enum class ClosureType : unsigned char {
             NOTYPE,
@@ -107,25 +118,14 @@ namespace RE
         };
     }
 
-    enum UnicodeCodePoint : unsigned int {
-        BASICPLANE_MIN              = 0x0000,
-        BASICPLANE_MAX              = 0xFFFF,
-        ALLSUPPLEMENTARYPLANES_MIN  = 0x010000,
-        ALLSUPPLEMENTARYPLANES_MAX  = 0x10FFFF
-    };
-
-    enum ASCIIControlCharacter : unsigned char {
-        ASCIICC_FIRST   = 0x00,
-        ASCIICC_LAST    = 0x1F,
-        ASCIICC_DEL     = 0x7F
-    };
-
     namespace Strings
     {
         extern const char* eof;
         extern const char* del;
-        extern const char* asciiCC[ASCIICC_LAST + 1];
+        extern const char* asciiCC[ASCII_CTRL_MAX + 1];
     }
+
+    ///----------------------------------------------------------------------------------------------------
 
     class Regexp;
 
@@ -248,7 +248,7 @@ namespace RE
 
     ///----------------------------------------------------------------------------------------------------
     
-    using SubsetTableIndex = long long int;
+    using SubsetTableIndex = int;
     constexpr SubsetTableIndex noTransition = -1;
 
     struct SubsetTableEntry {
@@ -258,7 +258,7 @@ namespace RE
 
     using SubsetTable = std::vector<SubsetTableEntry>;
 
-    using REstring = std::u32string;
+    using UString = std::u32string;                             // Unicode string
 
     using SetPartition = std::vector<std::vector<DFAnode*>>;
     constexpr size_t ringBufferSize = 4;
@@ -286,15 +286,19 @@ namespace RE
                 LITERAL                     // character, letter, symbol
             };
         private:
-            REstring& s;
+            UString& s;
             size_t pos;                     // index
-            std::vector<REstring> tss;      // array of token substrings (ring buffer)
+            std::vector<UString> tss;       // array of token substrings (ring buffer)
             size_t tpos;                    // index of the array of token substrings
         public:
-            TokenStream(REstring& string)
+            TokenStream(UString& string)
                 : s{ string }, pos{ std::numeric_limits<size_t>::max() }, tpos{ 0 }
             {
+                constexpr size_t capacity = Constants::unicodeDigits_6 + 2;
                 tss.resize(ringBufferSize);
+                for (UString& s : tss) {
+                    s.reserve(capacity);
+                }
             }
 
             TokenStream(const TokenStream& other) = delete;
@@ -304,7 +308,7 @@ namespace RE
 
             // const members
             size_t GetPosition() const { return pos; }
-            REstring GetSubstring(const size_t qty) const;
+            UString GetSubstring(const size_t qty) const;
             TokenType GetTokenType(const Character ch) const;
             std::pair<Character, TokenType> GetToken() const;
 
@@ -322,7 +326,7 @@ namespace RE
             }
         };
     private:
-        REstring source;
+        UString source;
         TokenStream ts;
         std::pair<Character, TokenStream::TokenType> token;
         std::set<Character> alphabetTemp;
@@ -406,7 +410,7 @@ namespace RE
         bool PNegation();
          NFA PCharacterClassRange(const CharacterFlags flags, const Constants::AtomType type);
         void PCharacterClassRangePrime(const CharacterFlags flags, const Constants::AtomType type, NFA& a);
-        void CheckRange(Character firstC, Character lastC);
+        void CheckRange(Character first, Character last);
          NFA PAtom(
                 const CharacterFlags flags = CHARFL_NOFLAGS,
                 const Constants::AtomType type = Constants::AtomType::STANDART);
@@ -422,11 +426,11 @@ namespace RE
         void PMax(int& max, Constants::ClosureType& ty);
          int PGetInteger();
         void ThrowInvalidRegexCharacter(const size_t position) const;
-        void ThrowInvalidRegexRange(const size_t position, const REstring& range) const;
-        void ThrowInvalidRegexEscape(const size_t position, const REstring& escapeSequence) const;
+        void ThrowInvalidRegexRange(const size_t position, const UString& range) const;
+        void ThrowInvalidRegexEscape(const size_t position, const UString& escapeSequence) const;
         void ThrowInvalidRegex(const std::string& message) const;
     public:
-        Regexp(const REstring& string);
+        Regexp(const UString& string);
 
         Regexp(const Regexp& other) = delete;
         Regexp& operator=(const Regexp& other) = delete;
@@ -434,11 +438,11 @@ namespace RE
         Regexp& operator=(Regexp&& other) = delete;
 
         // const members
-        bool Match(const REstring& string);
-        std::vector<MatchResults> Search(const REstring& string);
+        bool Match(const UString& string);
+        std::vector<MatchResults> Search(const UString& string);
 
         // nonconst members
-        void PutRE(const REstring& string);
+        void PutRE(const UString& string);
 
         // friends
         friend bool operator==(const Regexp& left, const Regexp& right);
@@ -450,7 +454,7 @@ namespace RE
     };
 
     std::string GetGlyph(const Character ch, bool withQuotes = false);
-    std::string GetGlyph(const REstring& string);
+    std::string GetGlyph(const UString& string);
 }
 
 #endif // REGEXPR_HPP

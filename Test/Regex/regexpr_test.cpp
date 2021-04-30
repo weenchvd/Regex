@@ -159,7 +159,7 @@ namespace RegexTest
 
     std::basic_istream<char32_t>& operator>>(std::basic_istream<char32_t>& is, RegexVector& rvector)
     {
-        RE::REstring line;
+        RE::UString line;
         while (is) {
             getline(is, line);
             if (is) {
@@ -172,12 +172,12 @@ namespace RegexTest
     std::basic_istream<char32_t>& operator>>(std::basic_istream<char32_t>& is, RegexMatch& rmatch)
     {
         is.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // first line is comment, skip it
-        RE::REstring secondLine;            // line of symbols
+        RE::UString secondLine;             // line of symbols
         getline(is, secondLine);
         if (!is) return is;
-        RE::REstring p_RE;                  // prefix
-        RE::REstring b_validMatch;          // border
-        RE::REstring b_invalidMatch;        // border
+        RE::UString p_RE;                   // prefix
+        RE::UString b_validMatch;           // border
+        RE::UString b_invalidMatch;         // border
         std::basic_istringstream<char32_t> iss{ secondLine };
         iss >> p_RE >> b_validMatch >> b_invalidMatch;
         if (!iss) {
@@ -188,7 +188,7 @@ namespace RegexTest
         RegexMatch rm;
         while (is) {
             RegexMatchCase rmcase;
-            RE::REstring separator;
+            RE::UString separator;
             if (buf) {
                 separator = buf.str;
                 buf.full = false;
@@ -225,7 +225,7 @@ namespace RegexTest
                 }
                 // get 'valid' or 'invalid'
                 is.get();
-                RE::REstring s;
+                RE::UString s;
                 getline(is, s, separator[0]);
                 if (!is) {
                     if (is.eof()) break;
@@ -251,14 +251,14 @@ namespace RegexTest
     std::basic_istream<char32_t>& operator>>(std::basic_istream<char32_t>& is, RegexSearch& rsearch)
     {
         is.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // first line is comment, skip it
-        RE::REstring secondLine;            // line of symbols
+        RE::UString secondLine;             // line of symbols
         getline(is, secondLine);
         if (!is) return is;
-        RE::REstring b_text;                // border
-        RE::REstring p_RE;                  // prefix
-        RE::REstring p_nMatches;            // prefix
-        RE::REstring b_validMatch;          // border
-        RE::REstring b_LCNumbers;           // border
+        RE::UString b_text;                 // border
+        RE::UString p_RE;                   // prefix
+        RE::UString p_nMatches;             // prefix
+        RE::UString b_validMatch;           // border
+        RE::UString b_LCNumbers;            // border
         std::basic_istringstream<char32_t> iss{ secondLine };
         iss >> b_text >> p_RE >> p_nMatches >> b_validMatch >> b_LCNumbers;
         if (!iss) {
@@ -269,7 +269,7 @@ namespace RegexTest
         RegexSearch rs;
         while (is) {
             RegexSearchCase rscase;
-            RE::REstring separator;
+            RE::UString separator;
             if (buf) {
                 separator = buf.str;
                 buf.full = false;
@@ -329,7 +329,7 @@ namespace RegexTest
                     is.setstate(std::ios_base::failbit);
                     return is;
                 }
-                rscase.valid.push_back(RE::REstring{});
+                rscase.valid.push_back(RE::UString{});
                 rscase.lineNumber.push_back(0);
                 rscase.posInLine.push_back(0);
                 // get 'valid'
@@ -425,7 +425,7 @@ namespace RegexTest
     }
 
     void ErrorReport(const std::string& reportFileName, const RegexVector& rvector,
-        const RE::REstring& errorList)
+        const RE::UString& errorList)
     {
         std::locale loc(std::locale(), new std::codecvt_utf8<char32_t>);
         std::basic_ofstream<char32_t> ofs{ reportFileName, std::ofstream::out | std::ofstream::app };
@@ -441,7 +441,7 @@ namespace RegexTest
     }
 
     void ErrorReport(const std::string& reportFileName, const RegexMatchCase& rmcase,
-        const RE::REstring& errorList)
+        const RE::UString& errorList)
     {
         std::locale loc(std::locale(), new std::codecvt_utf8<char32_t>);
         std::basic_ofstream<char32_t> ofs{ reportFileName, std::ofstream::out | std::ofstream::app };
@@ -457,7 +457,7 @@ namespace RegexTest
     }
 
     void ErrorReport(const std::string& reportFileName, const RegexSearchCase& rscase,
-        const RE::REstring& errorList)
+        const RE::UString& errorList)
     {
         std::locale loc(std::locale(), new std::codecvt_utf8<char32_t>);
         std::basic_ofstream<char32_t> ofs{ reportFileName, std::ofstream::out | std::ofstream::app };
@@ -473,7 +473,7 @@ namespace RegexTest
     }
 
     void ErrorReport(const std::string& reportFileName, const RegexSearchCase& rscase,
-        const std::vector<RE::MatchResults>& results, const RE::REstring& errorList)
+        const std::vector<RE::MatchResults>& results, const RE::UString& errorList)
     {
         std::locale loc(std::locale(), new std::codecvt_utf8<char32_t>);
         std::basic_ofstream<char32_t> ofs{ reportFileName, std::ofstream::out | std::ofstream::app };
@@ -531,7 +531,7 @@ namespace RegexTest
                 EXPECT_FALSE(exception);
             }
             try {
-                RE::Regexp re{ RE::REstring{'a'} }; COUNT;
+                RE::Regexp re{ RE::UString{'a'} }; COUNT;
                 re.PutRE(valid.vec[i]);
                 EXPECT_TRUE(noException);
             }
@@ -553,7 +553,7 @@ namespace RegexTest
             }
             if (!fail) {
                 RE::Regexp re1{ valid.vec[i] };
-                RE::Regexp re2{ RE::REstring{'a'} };
+                RE::Regexp re2{ RE::UString{'a'} };
                 re2.PutRE(valid.vec[i]);
                 const bool equal{ re1 == re2 };
                 EXPECT_TRUE(equal); COUNT;
@@ -606,7 +606,7 @@ namespace RegexTest
                 EXPECT_FALSE(exception);
             }
             try {
-                RE::Regexp re{ RE::REstring{'a'} }; COUNT;
+                RE::Regexp re{ RE::UString{'a'} }; COUNT;
                 re.PutRE(invalid.vec[i]);
                 oss << U">>> Error: RE::Regexp.PutRE(\"" << invalid.vec[i]
                     << U"\"). Expect: InvalidRegex exception. Actual: No exception" << std::endl
@@ -651,7 +651,7 @@ namespace RegexTest
             oss << U"RegexMatchCase #" << /*i + 1*/ ToChar(i + 1) << std::endl << std::endl;
             try {
                 RE::Regexp re1{ rmcase.re }; COUNT;
-                RE::Regexp re2{ RE::REstring{'a'} };
+                RE::Regexp re2{ RE::UString{'a'} };
                 re2.PutRE(rmcase.re); COUNT;
                 bool printReport{ false };
                 for (size_t j = 0; j < rmcase.valid.size(); ++j) {
@@ -721,7 +721,7 @@ namespace RegexTest
             oss << U"RegexSearchCase #" << /*i + 1*/ ToChar(i + 1) << std::endl << std::endl;
             try {
                 RE::Regexp re1{ rscase.re }; COUNT;
-                RE::Regexp re2{ RE::REstring{'a'} };
+                RE::Regexp re2{ RE::UString{'a'} };
                 re2.PutRE(rscase.re); COUNT;
                 bool printReport{ false };
                 const bool equal{ re1 == re2 };
@@ -740,7 +740,7 @@ namespace RegexTest
                 for (size_t j = 0; j < rscase.valid.size(); ++j) {
                     bool found{ false };
                     for (const RE::MatchResults& mr : results) {
-                        if (RE::REstring{ mr.str.first, mr.str.second } == rscase.valid[j]
+                        if (RE::UString{ mr.str.first, mr.str.second } == rscase.valid[j]
                             && mr.ln == rscase.lineNumber[j]
                             && mr.pos == rscase.posInLine[j]) {
                             found = true;

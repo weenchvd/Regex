@@ -445,18 +445,6 @@ namespace RE
 
     ///----------------------------------------------------------------------------------------------------
 
-    Regexp::TokenStream& Regexp::TokenStream::operator=(TokenStream&& other)
-    {
-        if (this == &other) {
-            return *this;
-        }
-        s = other.s;
-        pos = other.pos;
-        tss = other.tss;
-        tpos = other.tpos;
-        return *this;
-    }
-
     // 1 substring == 1 sequence of tokens from which 1 atom is created
     // qty == the quantity of last atoms for which the total substring will be obtained 
     UString Regexp::TokenStream::GetSubstring(const size_t qty) const
@@ -503,7 +491,7 @@ namespace RE
     inline std::pair<Character, Regexp::TokenStream::TokenType> Regexp::TokenStream::GetToken() const
     {
         if (pos >= s.size()) {
-            return { CHARFL_NOTCHAR, TokenType::EOS };
+            return { Constants::notCharacter, TokenType::EOS };
         }
         const Character ch = s[pos];
         return { ch, GetTokenType(ch) };
@@ -670,9 +658,8 @@ namespace RE
             if (node) {
                 transitions.push_back(node);
             }
-            const Character firstNegated = FLAGS_SET(0, CHARFL_NEGATED);
             TransitionTable::const_iterator itBeg =
-                std::lower_bound(p->trans.begin(), p->trans.end(), firstNegated, LessTransitionCharacter{});
+                std::lower_bound(p->trans.begin(), p->trans.end(), Constants::firstNegated, LessTransitionCharacter{});
             if (itBeg != p->trans.end()) {
                 auto it = itBeg;
                 std::vector<DFAnode*> negated;
@@ -818,7 +805,7 @@ namespace RE
                 nodes[i]->trans.push_back(Transition{ alphabet[j], nodes[index] });
             }
         }
-        nfa = NFA{ CHARFL_NOTCHAR };
+        nfa = NFA{ Constants::notCharacter };
         dfa.first = nodes[0];
         dfa.sz = table.size();
         return nodes;
@@ -875,7 +862,7 @@ namespace RE
     void Regexp::SetFlags()
     {
         for (const Character ch : alphabet) {
-            if (ch & CHARFL_NEGATED) {
+            if (FLAG_IS_SET(ch, CHARFL_NEGATED)) {
                 fl = FLAGS_SET(fl, REGFL_NEGATED);
                 break;
             }
@@ -1158,7 +1145,7 @@ namespace RE
             return NFA{ last };
         }
         case Regexp::TokenStream::TokenType::LITERAL: {
-            last = CHARFL_NOTCHAR;
+            last = Constants::notCharacter;
             if (!PIsEscape(last, type)) {
                 last = token.first;
             }
@@ -1488,7 +1475,7 @@ namespace RE
     }
 
     Regexp::Regexp(const UString& string)
-        : source{ string }, ts{ source }, nfa{ CHARFL_NOTCHAR }, last{ CHARFL_NOTCHAR },
+        : source{ string }, ts{ source }, nfa{ Constants::notCharacter }, last{ Constants::notCharacter },
         fl{ REGFL_NOFLAGS }
     {
         if (string.size() == 0) {
@@ -1499,7 +1486,7 @@ namespace RE
 
     bool Regexp::Match(const UString& string)
     {
-        if (fl & REGFL_NEGATED) {
+        if (FLAG_IS_SET(fl, REGFL_NEGATED)) {
             std::vector<DFAnode*>cur{ {dfa.first} };
             size_t pos = 0;
             while (pos < string.size()) {
@@ -1538,7 +1525,7 @@ namespace RE
         size_t line = 1;                    // line number
         size_t pos = 1;                     // position in line
         UString::const_iterator iter = string.cbegin();
-        if (fl & REGFL_NEGATED) {
+        if (FLAG_IS_SET(fl, REGFL_NEGATED)) {
             while (iter != string.cend()) {
                 Character ch = *iter;
                 std::vector<DFAnode*> cur{ {dfa.first} };
@@ -1611,12 +1598,12 @@ namespace RE
             throw Error::InvalidRegex{ "Empty regular expression " };
         }
         source = string;
-        ts = TokenStream{ source };
+        ts.Reset();
         alphabetTemp = std::set<Character>{};
         alphabet = std::vector<Character>{};
-        nfa = NFA{ CHARFL_NOTCHAR };
+        nfa = NFA{ Constants::notCharacter };
         dfa = DFA{};
-        last = CHARFL_NOTCHAR;
+        last = Constants::notCharacter;
         fl = REGFL_NOFLAGS;
         MakeDFA();
     }
@@ -1635,7 +1622,7 @@ namespace RE
     {
         const Character c = FLAGS_UNSET(ch, CHARFL_ALLFLAGS);
         std::string s;
-        if (ch & CHARFL_NEGATED) {
+        if (FLAG_IS_SET(ch, CHARFL_NEGATED)) {
             s += LIT_CARET;
         }
         if (c >= ASCII_CTRL_MIN && c <= ASCII_CTRL_MAX) {

@@ -42,13 +42,13 @@ namespace RegexTest
         ASSERT_EQ(n1.succ1, nullptr);
         ASSERT_EQ(n1.succ2, nullptr);
         ASSERT_EQ(n1.ty, RE::NFAnode::Type::ACCEPT);
-        ASSERT_EQ(n1.ch, RE::CHARFL_NOTCHAR);
+        ASSERT_EQ(n1.ch, RE::Constants::notCharacter);
         ASSERT_EQ(n1.mark, false);
     
         ASSERT_EQ(n2.succ1, nullptr);
         ASSERT_EQ(n2.succ2, nullptr);
         ASSERT_EQ(n2.ty, RE::NFAnode::Type::EPSILON);
-        ASSERT_EQ(n2.ch, RE::CHARFL_NOTCHAR);
+        ASSERT_EQ(n2.ch, RE::Constants::notCharacter);
         ASSERT_EQ(n2.mark, false);
     
         ASSERT_EQ(n3.succ1, nullptr);
@@ -76,7 +76,7 @@ namespace RegexTest
         ASSERT_EQ(last1->succ1, nullptr);
         ASSERT_EQ(last1->succ2, nullptr);
         ASSERT_EQ(last1->ty, RE::NFAnode::Type::ACCEPT);
-        ASSERT_EQ(last1->ch, RE::CHARFL_NOTCHAR);
+        ASSERT_EQ(last1->ch, RE::Constants::notCharacter);
         ASSERT_EQ(last1->mark, false);
 
         ASSERT_EQ(nfa2.Size(), 2);
@@ -90,7 +90,7 @@ namespace RegexTest
         ASSERT_EQ(last2->succ1, nullptr);
         ASSERT_EQ(last2->succ2, nullptr);
         ASSERT_EQ(last2->ty, RE::NFAnode::Type::ACCEPT);
-        ASSERT_EQ(last2->ch, RE::CHARFL_NOTCHAR);
+        ASSERT_EQ(last2->ch, RE::Constants::notCharacter);
         ASSERT_EQ(last2->mark, false);
     }
 

@@ -10,6 +10,8 @@
 #define FLAGS_SET(target, flags) target | flags
 #define FLAGS_UNSET(target, flags) target & ~flags
 
+#define FLAG_IS_SET(target, flag) target & flag
+
 /*
     RE - Regular Expression
     NFA - Nondeterministic Finite Automata
@@ -89,7 +91,7 @@ namespace RE
         CHARFL_NOTCHAR  = 0x80000000,       // Character bit #32: not Character
         CHARFL_NEGATED  = 0x40000000,       // Character bit #31: NEGATED LITERAL (any other than this)
         CHARFL_NOFLAGS  = 0x00000000,       // NO FLAGS
-        CHARFL_ALLFLAGS = CHARFL_NOTCHAR | CHARFL_NEGATED | CHARFL_NOFLAGS
+        CHARFL_ALLFLAGS = CHARFL_NOTCHAR | CHARFL_NEGATED
     };
 
     using RegexpFlags = unsigned int;
@@ -97,13 +99,16 @@ namespace RE
     enum RegexpFlag : RegexpFlags {
         REGFL_NEGATED   = 0x80000000,       // uint bit #32: negated characters are present
         REGFL_NOFLAGS   = 0x00000000,       // NO FLAGS
-        REGFL_ALLFLAGS  = REGFL_NEGATED | REGFL_NOFLAGS
+        REGFL_ALLFLAGS  = REGFL_NEGATED
     };
 
     namespace Constants
     {
         constexpr int unicodeDigits_4 = 4;  // number of Unicode code point digits after '\u'
         constexpr int unicodeDigits_6 = 6;  // number of Unicode code point digits after '\U'
+        constexpr int regexpNoFlags = FLAGS_SET(0, REGFL_NOFLAGS);
+        constexpr Character notCharacter = FLAGS_SET('\0', CHARFL_NOTCHAR);
+        constexpr Character firstNegated = FLAGS_SET('\0', CHARFL_NEGATED);
 
         enum class ClosureType : unsigned char {
             NOTYPE,
@@ -144,7 +149,7 @@ namespace RE
         bool mark;
         static NFAnode* hint;
     public:
-        NFAnode(Type type, Character character = CHARFL_NOTCHAR)
+        NFAnode(Type type, Character character = Constants::notCharacter)
             : succ1{ nullptr }, succ2{ nullptr }, ch{ character }, ty{ type }, mark{ false } {}
     };
 
@@ -304,7 +309,7 @@ namespace RE
             TokenStream(const TokenStream& other) = delete;
             TokenStream& operator=(const TokenStream& other) = delete;
             TokenStream(TokenStream&& other) = delete;
-            TokenStream& operator=(TokenStream&& other);
+            TokenStream& operator=(TokenStream&& other) = delete;
 
             // const members
             size_t GetPosition() const { return pos; }
@@ -322,6 +327,15 @@ namespace RE
                 }
                 if (pos < s.size()) {
                     tss[tpos] += s[pos];
+                }
+            }
+
+            void Reset()
+            {
+                pos = std::numeric_limits<size_t>::max();
+                tpos = 0;
+                for (UString& s : tss) {
+                    s.clear();
                 }
             }
         };
